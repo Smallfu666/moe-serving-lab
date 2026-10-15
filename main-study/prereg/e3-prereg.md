@@ -1,7 +1,6 @@
 # E3 preregistration — GB200 at node scale and across nodes
 
-Status: REVIEW CANDIDATE (not yet binding; becomes FROZEN, with the date, in the commit that follows an independent
-review GO and precedes every E3 job).
+Status: **FROZEN** on 2026-10-16 (Asia/Taipei), after an independent review GO and before any E3 job.
 
 ## 1. Question
 
@@ -96,14 +95,16 @@ As E2 §7, per replica or launch, with:
   rank exiting 8–14 is an instrument VOID and never counts toward NOT ESTABLISHED. Rank 0 stops waiting for readiness
   with exit 31 as soon as a worker reports a failure. A worker exiting 19 makes the phase then in progress, and every
   later phase, cut. The scored directory is rank 0's, and only when every rank's `arm_rc.txt` exists. If R16 L1 is VOID
-  because the server failed before ready (15, 18, 19 on rank 0 with no worker failure) or because a correctness phase
-  failed with a server-side or shape error, R16 is NOT ESTABLISHED and L2 and L3 are not run.
+  because the server failed before ready (rank 0 exit 15 or 18, or a worker exit 19 before rank 0's ready line, with
+  no worker exit 8–14) or because a correctness phase failed with a server-side or shape error, R16 is NOT ESTABLISHED
+  and L2 and L3 are not run.
 - **Re-runs** happen only if the budget check of §7 passes; otherwise a VOID job or launch is simply missing.
 
 ## 6. Data seen before freezing
 
+The job request (4 nodes × 4 GPUs, 48 CPUs and 600 GB per node, 1 h) is the one the second feasibility job used.
 From two feasibility jobs (FP8 only; short replays only; no correctness phases; NVFP4 not run): the four N4 replicas
-were ready in 326–337 s with a KV pool of 2,235,840 tokens each; the R16 server was ready in 352 s (rank 0) with a
+were ready in 326–337 s with a KV pool of 2,235,840 tokens each; the R16 server was ready 352 s after its start (374 s into the job step, rank 0) with a
 logged pool of 539,136 tokens per attention rank; replay turn counts in the short windows and zero bad requests. No
 TTFT, TPOT or throughput summary of these jobs was read. N4's pool is above the c = 64 working set (2,235,840 ÷
 2,013,679 = 1.11), so N4 is not capacity-limited at any point of its sweep, while G2-FP8 is from c = 32 (E2 §8).
