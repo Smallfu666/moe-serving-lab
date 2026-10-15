@@ -33,7 +33,7 @@ between, so the model has to fit in 2 × 185 GiB.
 
 | Folder | Contents |
 |---|---|
-| [`prereg/`](prereg/) | the preregistration; a template now, a redacted frozen copy later |
+| [`prereg/`](prereg/) | the E1 preregistration (`e1-prereg.md`) |
 | [`harness/`](harness/) | replay client, launch wrapper, pre-flight checks; environment variables and placeholders only |
 | [`results/`](results/) | small summary tables, quoted from the independent score; no raw logs |
 | [`analysis/`](analysis/) | scripts that turn the scored results into the tables and plots of the write-up |
