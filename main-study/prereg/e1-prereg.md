@@ -1,7 +1,6 @@
 # E1 preregistration
 
-Status: REVIEW CANDIDATE (not yet binding; becomes FROZEN, with the date, in the commit that follows an independent
-review GO and precedes every E1 job). Smoke runs before this date only set feasibility
+Status: **FROZEN** on 2026-10-16 (Asia/Taipei), after an independent review GO and before any E1 job. Smoke runs before this date only set feasibility
 inputs (§2a); none of their numbers is an E1 result and none moved a prediction band.
 
 ## 1. Question
@@ -138,7 +137,7 @@ H-FP8-TP4 arm is reported next to H-FP8 as description only; no verdict uses it.
 | exit 7–14, 17, 18; G-WALL; any return code not in `run_arm.sh`'s table (for example 1, 137, 143) | instrument VOID |
 | exit 15 (server exited before ready) or 19 (server died during a phase) | instrument VOID after a written analysis of `server.log`; if the re-run of that launch exits 15 or 19 again, E1 stops (overriding the general re-run rule below) and the repeated crash is recorded as an outcome for that arm |
 | exit 20–22 where every bad record has `error_kind` `client_timeout` or `client_exception`, or where no record carries an error or a token mismatch (client crash, missing summary) | instrument VOID |
-| exit 22 where every bad record has `error_kind` `client_shape` | instrument VOID after a written analysis; if the re-run repeats it, P5 is `NOT_EVALUABLE` and E1 continues |
+| exit 22 where every bad record has `error_kind` `client_shape` | only that launch's logprob phase is VOID; its replay and GSM8K phases stay valid and P1–P4 still use the launch. After a written analysis, one re-run job runs the logprob phase alone on a fresh server; if that repeats it, P5 is `NOT_EVALUABLE` and E1 continues |
 | exit 20–22 with any record of `error_kind` `server`, or a token-count mismatch | G-LOAD failure |
 | G-BACKEND (exit 16), G-SAME, G-LOAD | gate failure |
 | G-BATCH | P3 `NOT_EVALUABLE` for that arm; not a stop |
