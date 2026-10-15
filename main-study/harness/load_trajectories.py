@@ -79,9 +79,12 @@ def drop_nulls(obj):
 
 def make_encoder(tokenizer, tools):
     def encode(messages, add_generation_prompt):
-        return tokenizer.apply_chat_template(
-            messages, tools=tools, add_generation_prompt=add_generation_prompt, tokenize=True
+        ids = tokenizer.apply_chat_template(
+            messages, tools=tools, add_generation_prompt=add_generation_prompt, tokenize=True, return_dict=False
         )
+        if not (isinstance(ids, list) and all(isinstance(i, int) for i in ids[:4])):
+            raise TypeError(f"chat template returned {type(ids).__name__}, expected a flat list of token ids")
+        return ids
     return encode
 
 
