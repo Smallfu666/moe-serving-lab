@@ -40,7 +40,7 @@ ENVS=(--env PYTHONNOUSERSITE=1)
 for v in HF_HOME TRITON_CACHE_DIR TORCHINDUCTOR_CACHE_DIR XDG_CACHE_HOME TMPDIR FLASHINFER_WORKSPACE_BASE SGLANG_CACHE_DIR MSL_TP; do
   ENVS+=(--env "$v=${!v}")
 done
-AX=(apptainer exec --nv --cleanenv "${ENVS[@]}" --bind "$MSL_ROOT" "$MSL_SIF")
+AX=("${MSL_CONTAINER_BIN:-apptainer}" exec --nv --cleanenv "${ENVS[@]}" --bind "$MSL_ROOT" "$MSL_SIF")
 "${AX[@]}" python3 - > ctx.txt 2>&1 <<'EOF' || finish 14
 import os, site, sys, torch, sglang
 assert site.ENABLE_USER_SITE is False, "user site enabled"
