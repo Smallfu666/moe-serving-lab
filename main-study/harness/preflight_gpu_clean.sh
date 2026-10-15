@@ -10,10 +10,10 @@ max=$(printf '%s\n' "$used" | sort -rn | head -1)
   echo "limit_mib=$limit"
   echo "max_used_mib=$max"
   nvidia-smi --query-gpu=index,uuid,memory.used,memory.total --format=csv
+  nvidia-smi --query-compute-apps=gpu_uuid,pid,used_memory --format=csv 2>&1 || true
 } > "$out"
 
 if [ "$max" -ge "$limit" ]; then
-  nvidia-smi --query-compute-apps=pid,used_memory --format=csv >> "$out" 2>&1 || true
   echo "GPU_NOT_CLEAN max_used_mib=$max" >&2
   exit 11
 fi

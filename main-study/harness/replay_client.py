@@ -5,7 +5,9 @@ each answer before sending the next turn; there is no think time. Turn k sends t
 (`seq[:prompt_len]`) and asks for the recorded answer length, capped, with `ignore_eos`, so every arm receives
 identical prompts and produces identical token counts.
 
-One JSON line per request goes to --out; a summary line goes to --summary.
+With --deadline-s, no new turn starts after that many seconds (used by smoke runs to size the registered load);
+the summary then records how many turns completed. One JSON line per request goes to --out; a summary line goes
+to --summary.
 """
 
 import argparse
@@ -68,16 +70,23 @@ async def run(a):
     for s in sessions:
         queue.put_nowait(s)
     out = open(a.out, "w")
-    errors = 0
+    errors, done_turns, cut = 0, 0, False
+    t0 = time.perf_counter()
+
+    def past_deadline():
+        return a.deadline_s is not None and time.perf_counter() - t0 > a.deadline_s
 
     async def worker(wid, http):
-        nonlocal errors
-        while True:
+        nonlocal errors, done_turns, cut
+        while not past_deadline():
             try:
                 s = queue.get_nowait()
             except asyncio.QueueEmpty:
                 return
             for k, turn in enumerate(s["turns"]):
+                if past_deadline():
+                    cut = True
+                    break
                 max_new = min(turn["answer_len"], a.max_answer)
                 rec = await one_request(http, a.url, s["seq"][: turn["prompt_len"]], max_new, a.request_timeout)
                 rec.update({"session": s["session"], "turn": k, "worker": wid, "max_new": max_new,
@@ -85,17 +94,18 @@ async def run(a):
                 if rec["error"] or rec["completion_tokens"] != max_new or rec["prompt_tokens"] != turn["prompt_len"]:
                     errors += 1
                 out.write(json.dumps(rec) + "\n")
+                done_turns += 1
                 if rec["error"]:
                     break
 
-    t0 = time.perf_counter()
     conn = aiohttp.TCPConnector(limit=a.concurrency * 2)
     async with aiohttp.ClientSession(connector=conn) as http:
         await asyncio.gather(*(worker(i, http) for i in range(a.concurrency)))
     wall = time.perf_counter() - t0
     out.close()
     summary = {"concurrency": a.concurrency, "sessions": len(sessions), "start": a.start, "wall_s": wall,
-               "bad_requests": errors}
+               "turns_done": done_turns, "turns_total": sum(len(s["turns"]) for s in sessions),
+               "cut_by_deadline": cut or not queue.empty(), "bad_requests": errors}
     Path(a.summary).write_text(json.dumps(summary) + "\n")
     print(json.dumps(summary))
     return 0 if errors == 0 else 3
@@ -110,6 +120,7 @@ def main():
     ap.add_argument("--concurrency", type=int, required=True)
     ap.add_argument("--max-answer", type=int, default=1024)
     ap.add_argument("--request-timeout", type=float, default=900)
+    ap.add_argument("--deadline-s", type=float, default=None)
     ap.add_argument("--out", required=True)
     ap.add_argument("--summary", required=True)
     raise SystemExit(asyncio.run(run(ap.parse_args())))

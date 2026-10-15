@@ -72,7 +72,7 @@ class Clients(unittest.TestCase):
         import replay_client
         with tempfile.TemporaryDirectory() as d:
             sp = self.sessions_file(d)
-            a = SimpleNamespace(sessions=sp, start=1, count=2, concurrency=2, max_answer=8, request_timeout=30,
+            a = SimpleNamespace(sessions=sp, start=1, count=2, concurrency=2, max_answer=8, request_timeout=30, deadline_s=None,
                                 out=f"{d}/o.jsonl", summary=f"{d}/s.json")
             rc, sent = self.serve(lambda url: replay_client.run(SimpleNamespace(**vars(a), url=url)))
             recs = [json.loads(x) for x in Path(a.out).read_text().splitlines()]
@@ -82,7 +82,18 @@ class Clients(unittest.TestCase):
             self.assertEqual(sorted(len(b["input_ids"]) for b in sent), [10, 10, 20, 20, 150, 150])
             self.assertEqual(sorted(b["sampling_params"]["max_new_tokens"] for b in sent), [5, 5, 8, 8, 8, 8])
             self.assertTrue(all(r["ttft_s"] is not None and r["cached_tokens"] == 4 for r in recs))
-            self.assertEqual(json.loads(Path(a.summary).read_text())["bad_requests"], 0)
+            summ = json.loads(Path(a.summary).read_text())
+            self.assertEqual((summ["bad_requests"], summ["turns_done"], summ["cut_by_deadline"]), (0, 6, False))
+
+    def test_replay_deadline(self):
+        import replay_client
+        with tempfile.TemporaryDirectory() as d:
+            sp = self.sessions_file(d)
+            a = SimpleNamespace(sessions=sp, start=0, count=4, concurrency=2, max_answer=8, request_timeout=30,
+                                deadline_s=0.0, out=f"{d}/o.jsonl", summary=f"{d}/s.json")
+            rc, sent = self.serve(lambda url: replay_client.run(SimpleNamespace(**vars(a), url=url)))
+            summ = json.loads(Path(a.summary).read_text())
+            self.assertEqual((rc, summ["turns_done"], summ["cut_by_deadline"]), (0, 0, True))
 
     def test_gsm8k(self):
         import gsm8k_client

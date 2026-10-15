@@ -2,7 +2,7 @@
 # One server launch of one arm, run inside a Slurm allocation. All site values come from the deployed env file.
 #
 # Usage: run_arm.sh <arm-tag> <model-dir> <expect-gpu: GB200|H200> <phases> <out-dir>
-#   phases: comma list of  replay:<concurrency>:<start>:<count> | gsm8k | logprob:<start>:<n>
+#   phases: comma list of  replay:<concurrency>:<start>:<count>[:<deadline-s>] | gsm8k | logprob:<start>:<n>
 #
 # Exit codes (distinct per cause, so a 0-second failure is never read as a hardware result):
 #    8 cache dir outside MSL_ROOT    9 arch / env leak            10 wrong GPU type or count
@@ -74,12 +74,12 @@ status ready 0
 PY=("${AX[@]}" python3)
 IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do
-  IFS=: read -r kind p1 p2 p3 <<< "$step"
+  IFS=: read -r kind p1 p2 p3 p4 <<< "$step"
   case "$kind" in
     replay)
       curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
       "${PY[@]}" "$MSL_HARNESS/replay_client.py" --url "$URL" --sessions "$MSL_REPLAY" --concurrency "$p1" \
-        --start "$p2" --count "$p3" --out "replay_c$p1.jsonl" --summary "replay_c$p1.summary.json" > "replay_c$p1.log" 2>&1 \
+        --start "$p2" --count "$p3" ${p4:+--deadline-s "$p4"} --out "replay_c$p1.jsonl" --summary "replay_c$p1.summary.json" > "replay_c$p1.log" 2>&1 \
         || finish 20 ;;
     gsm8k)
       curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
