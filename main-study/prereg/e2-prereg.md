@@ -210,4 +210,10 @@ Correction: **H8-FP8 and H100-8-FP8 run `--tp 8 --ep-size 8`** (expert paralleli
 - All three H8 launches are run anew with the corrected setting, after the registered H200 sequence; the failed starts
   are recorded as configuration-defect VOIDs, not as data.
 - H100-8-FP8 uses the same correction and remains conditional on §2a.
+- The corrected H8 and H100-8 launches pass `--ep-size 8` through the harness option `MSL_SERVER_ARGS`, which exists
+  only from harness commit `2503cec` (E3's frozen commit) on. They therefore run `main-study/harness/` at `2503cec`
+  from a separate checkout. Its `run_arm.sh` differs from this prereg's frozen commit only by options E2 does not use
+  otherwise (multi-node launch, exit 31) and by limiting the end-time stop to cuts caused by the end time, which is
+  the same behaviour for E2's phase lists (they have no per-phase deadlines); the clients are unchanged. G-SAME holds
+  within each configuration: all H8 launches share one harness commit, as do all H100-8 launches.
 - Budget: project cap raised to 275 GPU-h (reserve ≥ 10) to cover the corrected H8 launches.
