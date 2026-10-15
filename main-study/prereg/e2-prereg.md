@@ -113,7 +113,7 @@ not a cost statement. Differences are described, not attributed.
 
 ## 9. Method references (paraphrased, not copied)
 
-- Throughput per GPU and interactivity definitions as used by the InferenceX dashboards:
+- Throughput per GPU and interactivity definitions as used by the InferenceX benchmark pages:
   <https://inferencex.semianalysis.com/glossary/throughput>, <https://inferencex.semianalysis.com/glossary/interactivity>.
 - Comparing GB200 and Hopper serving along throughput–latency trade-offs: <https://lmsys.org/blog/2025-06-16-gb200-part-1>.
 
