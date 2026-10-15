@@ -46,15 +46,18 @@ async def run(a):
             try:
                 async with http.post(a.url + "/generate", json=payload,
                                      timeout=aiohttp.ClientTimeout(total=a.request_timeout)) as r:
-                    body = await r.json() if r.status == 200 else {"error": f"http {r.status}"}
-            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                body = {"error": f"{type(e).__name__}"}
+                    body = await r.json() if r.status == 200 else {"error": f"http {r.status}", "error_kind": "server"}
+            except asyncio.TimeoutError:
+                body = {"error": "TimeoutError", "error_kind": "client_timeout"}
+            except aiohttp.ClientError as e:
+                body = {"error": type(e).__name__, "error_kind": "client_exception"}
         text = body.get("text", "")
         meta = body.get("meta_info", {})
         pred, label = answer_value(text), answer_value(test[i]["answer"].split("####")[-1])
         results[i] = {"idx": i, "pred": pred, "label": label, "correct": pred is not None and pred == label,
                       "invalid": pred is None, "finish_reason": meta.get("finish_reason"),
-                      "completion_tokens": meta.get("completion_tokens"), "error": body.get("error")}
+                      "completion_tokens": meta.get("completion_tokens"), "error": body.get("error"),
+                  "error_kind": body.get("error_kind")}
 
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=a.parallel)) as http:
         await asyncio.gather(*(one(i, http) for i in range(len(test))))

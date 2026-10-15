@@ -1,8 +1,9 @@
 """Teacher-forced top-k logprobs on a fixed set of recorded agent turns.
 
 Each item is one turn of a session from load_trajectories.py: the input is the recorded prompt plus the first
-`forced` tokens of the recorded answer, and the server returns, for each of those answer positions, the logprob of
-the recorded token and the top-k alternatives. Because the forced tokens come from the dataset, not from any arm,
+`forced` tokens of the recorded answer. The request starts logprobs one token before the answer, because SGLang
+returns None for the first position of the window; the remaining `forced` positions are the answer tokens, each with
+the logprob of the recorded token and the top-k alternatives. A response of any other shape is an error. Because the forced tokens come from the dataset, not from any arm,
 arms (and a reference run on other hardware) can be compared position by position after the fact.
 """
 
@@ -38,6 +39,20 @@ def build_items(sessions, n, max_prompt, forced):
     return items
 
 
+def check_shape(meta, forced, top_k):
+    tok, top = meta.get("input_token_logprobs"), meta.get("input_top_logprobs")
+    n = len(forced) + 1
+    if not tok or not top or len(tok) != n or len(top) != n:
+        return f"logprob shape: expected {n} entries"
+    if top[0] is not None or tok[0][0] is not None:
+        return "logprob shape: first entry is not None"
+    if [t[1] for t in tok[1:]] != forced:
+        return "logprob shape: token ids differ from the forced tokens"
+    if any(len(x) != top_k for x in top[1:]):
+        return f"logprob shape: top-k is not {top_k}"
+    return None
+
+
 async def run(a):
     lines = Path(a.sessions).read_text().splitlines()[a.start:]
     items = build_items((json.loads(x) for x in lines), a.n, a.max_prompt, a.forced)
@@ -47,26 +62,34 @@ async def run(a):
     async def one(i, http):
         it = items[i]
         payload = {"input_ids": it["ids"], "sampling_params": {"max_new_tokens": 1, "temperature": 0.0},
-                   "return_logprob": True, "logprob_start_len": it["prompt_len"], "top_logprobs_num": a.top_k}
+                   "return_logprob": True, "logprob_start_len": it["prompt_len"] - 1, "top_logprobs_num": a.top_k}
         async with sem:
             try:
                 async with http.post(a.url + "/generate", json=payload,
                                      timeout=aiohttp.ClientTimeout(total=a.request_timeout)) as r:
-                    body = await r.json() if r.status == 200 else {"error": f"http {r.status}"}
-            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                body = {"error": f"{type(e).__name__}"}
+                    body = await r.json() if r.status == 200 else {"error": f"http {r.status}", "error_kind": "server"}
+            except asyncio.TimeoutError:
+                body = {"error": "TimeoutError", "error_kind": "client_timeout"}
+            except aiohttp.ClientError as e:
+                body = {"error": type(e).__name__, "error_kind": "client_exception"}
         meta = body.get("meta_info", {})
+        forced = it["ids"][it["prompt_len"]:]
+        if not body.get("error"):
+            shape = check_shape(meta, forced, a.top_k)
+            if shape:
+                body = {"error": shape, "error_kind": "server"}
         out[i] = {"session": it["session"], "turn": it["turn"], "prompt_len": it["prompt_len"],
-                  "forced_ids": it["ids"][it["prompt_len"]:],
+                  "forced_ids": forced,
                   "input_token_logprobs": meta.get("input_token_logprobs"),
-                  "input_top_logprobs": meta.get("input_top_logprobs"), "error": body.get("error")}
+                  "input_top_logprobs": meta.get("input_top_logprobs"), "error": body.get("error"),
+                  "error_kind": body.get("error_kind")}
 
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=a.parallel)) as http:
         await asyncio.gather(*(one(i, http) for i in range(len(items))))
     with open(a.out, "w") as f:
         for r in out:
             f.write(json.dumps(r) + "\n")
-    errors = sum(r["error"] is not None or not r["input_top_logprobs"] for r in out)
+    errors = sum(r["error"] is not None for r in out)
     print(json.dumps({"items": len(out), "errors": errors}))
     return 0 if errors == 0 else 3
 

@@ -28,8 +28,9 @@ def fake_app(state):
         if body.get("return_logprob"):
             start = body["logprob_start_len"]
             k = body["top_logprobs_num"]
-            meta["input_token_logprobs"] = [[-0.5, t, None] for t in body["input_ids"][start:]]
-            meta["input_top_logprobs"] = [[[-0.1 * j, j, None] for j in range(k)] for _ in body["input_ids"][start:]]
+            ids = body["input_ids"][start:]
+            meta["input_token_logprobs"] = [[None, ids[0], None]] + [[-0.5, t, None] for t in ids[1:]]
+            meta["input_top_logprobs"] = [None] + [[[-0.1 * j, j, None] for j in range(k)] for _ in ids[1:]]
         if body.get("stream"):
             resp = web.StreamResponse()
             await resp.prepare(request)
@@ -120,8 +121,20 @@ class Clients(unittest.TestCase):
             recs = [json.loads(x) for x in Path(a.out).read_text().splitlines()]
             self.assertEqual(rc, 0)
             self.assertEqual([r["turn"] for r in recs], [1, 1, 1])
-            self.assertTrue(all(len(b["input_ids"]) == 20 + 64 and b["logprob_start_len"] == 20 for b in sent))
-            self.assertEqual(len(recs[0]["input_top_logprobs"]), 64)
+            self.assertTrue(all(len(b["input_ids"]) == 20 + 64 and b["logprob_start_len"] == 19 for b in sent))
+            self.assertEqual(len(recs[0]["input_top_logprobs"]), 65)
+            self.assertTrue(all(r["error"] is None for r in recs))
+
+    def test_logprob_shape(self):
+        from logprob_client import check_shape
+        forced = [5, 6]
+        good = {"input_token_logprobs": [[None, 4, None], [-1, 5, None], [-1, 6, None]],
+                "input_top_logprobs": [None, [[0, 1, None]], [[0, 1, None]]]}
+        self.assertIsNone(check_shape(good, forced, 1))
+        self.assertIn("first entry", check_shape({**good, "input_top_logprobs": [[[0, 1, None]]] * 3}, forced, 1))
+        self.assertIn("token ids", check_shape(good, [5, 7], 1))
+        self.assertIn("expected 3", check_shape({**good, "input_token_logprobs": good["input_token_logprobs"][:2]}, forced, 1))
+        self.assertIn("top-k", check_shape(good, forced, 2))
 
     def test_pick_turn(self):
         from logprob_client import pick_turn

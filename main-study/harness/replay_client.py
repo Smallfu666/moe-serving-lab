@@ -34,11 +34,13 @@ async def one_request(http, url, ids, max_new, timeout_s):
         "stream": True,
     }
     t0 = time.perf_counter()
-    t_first, meta, error = None, {}, None
+    t_first, meta, error, kind = None, {}, None, None
     try:
         async with http.post(url + "/generate", json=payload, timeout=aiohttp.ClientTimeout(total=timeout_s)) as r:
             if r.status != 200:
-                return {"error": f"http {r.status}: {(await r.text())[:200]}", "t_send": t0}
+                return {"error": f"http {r.status}: {(await r.text())[:200]}", "error_kind": "server", "t_send": t0,
+                        "ttft_s": None, "e2e_s": time.perf_counter() - t0, "tpot_s": None, "prompt_tokens": None,
+                        "completion_tokens": None, "cached_tokens": None, "finish_reason": None}
             async for raw in r.content:
                 line = raw.strip()
                 if not line.startswith(b"data:"):
@@ -48,15 +50,18 @@ async def one_request(http, url, ids, max_new, timeout_s):
                     break
                 chunk = json.loads(body)
                 if "error" in chunk:
-                    error = str(chunk["error"])[:200]
+                    error, kind = str(chunk["error"])[:200], "server"
                     break
                 if t_first is None:
                     t_first = time.perf_counter()
                 meta = chunk.get("meta_info", meta)
-    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        error = f"{type(e).__name__}: {e}"[:200]
+    except asyncio.TimeoutError as e:
+        error, kind = f"TimeoutError: {e}"[:200], "client_timeout"
+    except aiohttp.ClientError as e:
+        error, kind = f"{type(e).__name__}: {e}"[:200], "client_exception"
     t_end = time.perf_counter()
-    rec = {"t_send": t0, "ttft_s": None if t_first is None else t_first - t0, "e2e_s": t_end - t0, "error": error}
+    rec = {"t_send": t0, "ttft_s": None if t_first is None else t_first - t0, "e2e_s": t_end - t0, "error": error,
+           "error_kind": kind}
     for k in ("prompt_tokens", "completion_tokens", "cached_tokens", "finish_reason"):
         rec[k] = meta.get(k)
     n = rec["completion_tokens"] or 0

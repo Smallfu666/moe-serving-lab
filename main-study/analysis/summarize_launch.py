@@ -5,7 +5,6 @@ Usage: summarize_launch.py <arm-dir> [<arm-dir> ...]   -> one JSON object per la
 
 import json
 import re
-import statistics
 import sys
 from pathlib import Path
 
@@ -24,13 +23,17 @@ def replay_point(path):
     out_tok = sum(r["completion_tokens"] or 0 for r in ok)
     prompt = sum(r["prompt_tokens"] or 0 for r in ok)
     cached = sum(r["cached_tokens"] or 0 for r in ok)
+    kinds = {}
+    for r in recs:
+        if r.get("error_kind"):
+            kinds[r["error_kind"]] = kinds.get(r["error_kind"], 0) + 1
     bad = sum(1 for r in recs if r["error"] or r["completion_tokens"] != r["max_new"]
               or r["prompt_tokens"] != r["replay_prompt_len"])
     return {
-        "requests": len(recs), "bad_requests": bad, "turns_done": summary.get("turns_done"),
+        "requests": len(recs), "bad_requests": bad, "error_kinds": kinds, "turns_done": summary.get("turns_done"),
         "cut_by_deadline": summary.get("cut_by_deadline"), "wall_s": summary["wall_s"],
         "ttft_p50_ms": 1e3 * pct(ttft, 0.5) if ttft else None, "ttft_p90_ms": 1e3 * pct(ttft, 0.9) if ttft else None,
-        "tpot_p50_ms": 1e3 * statistics.median(tpot) if tpot else None,
+        "tpot_p50_ms": 1e3 * pct(tpot, 0.5) if tpot else None,
         "out_tok_s": out_tok / summary["wall_s"] if summary["wall_s"] else None,
         "prefix_hit": cached / prompt if prompt else None,
     }
