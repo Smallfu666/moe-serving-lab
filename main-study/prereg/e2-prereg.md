@@ -1,7 +1,6 @@
 # E2 preregistration — throughput vs interactivity, each platform at its own configuration
 
-Status: REVIEW CANDIDATE (not yet binding; becomes FROZEN, with the date, in the commit that follows an independent
-review GO and precedes every E2 job).
+Status: **FROZEN** on 2026-10-16 (Asia/Taipei), after an independent review GO and before any E2 job.
 
 ## 1. Question
 
