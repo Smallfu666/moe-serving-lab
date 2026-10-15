@@ -11,6 +11,10 @@
 #   16 expected MoE backend not in log                           17 cache flush refused
 #   18 server not ready within MSL_READY_TIMEOUT_S               19 server process died during a phase
 #   20+ a phase client reported bad requests (20 replay, 21 gsm8k, 22 logprob); see each record's error_kind
+#   30 stopped at the harness end time (MSL_END_EPOCH): the phase in progress was cut or the next one could not start
+#
+# MSL_END_EPOCH (optional): epoch seconds by which the launch must stop. A replay phase gets the remaining time minus
+# MSL_END_MARGIN_S as its deadline; a phase that would start with less than MSL_MIN_PHASE_S left is not started.
 set -uo pipefail
 TAG=$1 MODEL=$2 EXPECT=$3 PHASES=$4 OUT=$5
 : "${MSL_ROOT:?}" "${MSL_SIF:?}" "${MSL_HARNESS:?}" "${MSL_REPLAY:?}" "${MSL_REPLAY_SHA:?}" "${MSL_GSM8K_DIR:?}"
@@ -75,10 +79,17 @@ fi
 status ready 0
 
 PY=("${AX[@]}" python3)
+left () { [ -n "${MSL_END_EPOCH:-}" ] && echo $(( MSL_END_EPOCH - $(date +%s) - ${MSL_END_MARGIN_S:-120} )) || echo 999999; }
+wall_stop () { echo "$TAG $1 wall_stop left_s=$(left) $(date -Is)" >> "$OUT/arm_status.txt"; finish 30; }
 phase_fail () { kill -0 "$SERVER" 2>/dev/null || finish 19; finish "$1"; }
 IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do
   IFS=: read -r kind p1 p2 p3 p4 <<< "$step"
+  [ "$(left)" -ge "${MSL_MIN_PHASE_S:-60}" ] || wall_stop "$step"
+  if [ "$kind" = replay ] && [ -n "${MSL_END_EPOCH:-}" ]; then
+    lim=$(left); [ -n "${p4:-}" ] && [ "$p4" -lt "$lim" ] && lim=$p4
+    p4=$lim
+  fi
   echo "$step start $(wc -l < server.log)" >> phase_lines.txt
   case "$kind" in
     replay)
@@ -97,6 +108,9 @@ for step in "${steps[@]}"; do
     *) echo "unknown phase $step"; finish 9 ;;
   esac
   echo "$step end $(wc -l < server.log)" >> phase_lines.txt
+  if [ "$kind" = replay ] && grep -q '"cut_by_deadline": true' "replay_c$p1.summary.json" && [ -n "${MSL_END_EPOCH:-}" ]; then
+    wall_stop "$step"
+  fi
   status "$step" 0
 done
 finish 0
