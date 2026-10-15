@@ -20,8 +20,8 @@ logged `Use flashinfer_trtllm as MoE runner backend`), so the verdicts do not de
 the H200 server logs: the settings show `'moe_runner_backend': 'auto'`, and at startup the server looked up kernel
 configuration files of the Triton fused-MoE runner (for example
 `moe_runner/triton_utils/configs/triton_3_8_0/E=128,N=768,device_name=NVIDIA_H200,dtype=fp8_w8a8,block_shape=[128, 128].json`,
-not found, fallback to an older Triton version's file). That indicates the Triton fused-MoE runner was configured; it
-does not show which kernels executed. The pattern is fixed in the harness for future experiments; the running E2 and
+not found, fallback to an older Triton version's file). That is consistent with the Triton fused-MoE path, but it is
+not a logged selection and does not show which kernels executed: **the backend on H200 is not established.** The pattern is fixed in the harness for future experiments; the running E2 and
 E3 keep their frozen harness, and their backend records are read from the server logs instead.
 
 ## Predictions
