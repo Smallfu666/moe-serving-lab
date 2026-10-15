@@ -197,18 +197,25 @@ first, then E2 GB200, H200, H100, in that order. Any later experiment is funded 
 
 ## Errata
 
-**E-1 (2026-10-16, made before any E2 metric file was read).** H8-FP8 and H100-8-FP8 as registered (`--tp 8`, no
+**E-1 (2026-10-16, made before any E2 throughput, interactivity or accuracy value was read; only failure records —
+exit codes, error kinds, turn counts — had been inspected).** H8-FP8 and H100-8-FP8 as registered (`--tp 8`, no
 expert parallelism) cannot start on the pinned software: every rank stops at model load with "The output_size of
 gate's and up's weight = 192 is not divisible by weight quantization block_n = 128". The model's MoE intermediate size,
 1536, split eight ways is 192, which the FP8 checkpoint's 128-wide quantization blocks cannot divide (TP2 gives 768 and
-TP4 gives 384, which divide). Two H8 launches failed this way before ready; their records contain no metrics.
+TP4 gives 384, which divide). Two H8 launches failed this way before ready (a third, already running, is expected to); their records contain no
+metrics.
 Correction: **H8-FP8 and H100-8-FP8 run `--tp 8 --ep-size 8`** (expert parallelism keeps every expert whole, so the
 1536-wide dimension is not split). Everything else in this prereg is unchanged. Consequences:
 
 - H8 runs TP8 + EP8 while H4 runs TP4 and the GB200 configurations run TP2; every reported point and ratio names its
-  parallelism, and no H8-vs-H4 difference is attributed to GPU count alone.
-- All three H8 launches are run anew with the corrected setting, after the registered H200 sequence; the failed starts
-  are recorded as configuration-defect VOIDs, not as data.
+  parallelism, and no H8-vs-H4 difference is attributed to GPU count or to expert parallelism alone. The H200
+  platform frontier is a union of TP4 points and TP8 + EP8 points, and is labelled so. H8 is no longer interleaved
+  with H4: its launches run after the registered H200 sequence.
+- The five earlier H8 jobs are all VOID and are not data: two instrument (node fault before the harness started) and
+  three configuration defect (this erratum). The corrected configuration gets three **new** launches, L1–L3, each with
+  the normal §7 allowance of one re-run after a written analysis.
+- **Stop rule:** if the first corrected H8-FP8 launch exits 15 or 18 (the server never becomes ready), H8-FP8 is
+  `NOT_RUN`: no re-run and no further erratum. The same applies to H100-8-FP8.
 - H100-8-FP8 uses the same correction and remains conditional on §2a.
 - The corrected H8 and H100-8 launches pass `--ep-size 8` through the harness option `MSL_SERVER_ARGS`, which exists
   only from harness commit `2503cec` (E3's frozen commit) on. They therefore run `main-study/harness/` at `2503cec`
@@ -216,4 +223,7 @@ Correction: **H8-FP8 and H100-8-FP8 run `--tp 8 --ep-size 8`** (expert paralleli
   otherwise (multi-node launch, exit 31) and by limiting the end-time stop to cuts caused by the end time, which is
   the same behaviour for E2's phase lists (they have no per-phase deadlines); the clients are unchanged. G-SAME holds
   within each configuration: all H8 launches share one harness commit, as do all H100-8 launches.
-- Budget: project cap raised to 275 GPU-h (reserve ≥ 10) to cover the corrected H8 launches.
+- Budget: the project cap is raised from 250 (E3 prereg) to 275 GPU-h, reserve ≥ 10. Added cost: about 24 GPU-h for
+  the three configuration-defect starts (8 GPUs each, one billed hour minimum) and 24 for the three corrected H8
+  launches. H100-8 (3 × 8 = 24, conditional) is inside the 275. E3's own submission gate (≤ 240 committed at each E3
+  submission) is unchanged.
