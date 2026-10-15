@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=msl-<arm>
-#SBATCH --gres=gpu:<gpu-type>:2
-#SBATCH --time=02:00:00
-#SBATCH --mem=400G
+#SBATCH --gres=gpu:<gpu-type>:<n>
+#SBATCH --time=<hh:mm:ss>
+#SBATCH --mem=<200G for 1 GPU, 400G for 2>
 #SBATCH --output=<log-dir>/%j.out
 #SBATCH --error=<log-dir>/%j.err
-# Submit with: sbatch --exclude="$MSL_EXCLUDE_NODES" job.sbatch
+# Submit from a neutral directory: sbatch --chdir=<log-dir> --exclude="$MSL_EXCLUDE_NODES" job.sbatch
 # SBATCH_ACCOUNT and SBATCH_PARTITION are read from the environment (see env.example.sh).
-set -euo pipefail
+set -uo pipefail
 source "<deployed-env.sh>"
+mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" "$XDG_CACHE_HOME" "$FLASHINFER_WORKSPACE_BASE" \
+  "$SGLANG_CACHE_DIR" "$TMPDIR"
+OUT="$MSL_ROOT/runs/$SLURM_JOB_ID"
+mkdir -p "$OUT"
 
-out="$MSL_ROOT/runs/$SLURM_JOB_ID"
-mkdir -p "$out"
-nvidia-smi topo -m > "$out/topo.txt"
-bash "<harness-dir>/preflight_gpu_clean.sh" "$out/gpu_clean.txt" || { echo 11 > "$out/arm_rc.txt"; exit 11; }
-
-# <arm launch, replay, GSM8K, logprob: to be written after the preregistration is frozen>
-
-echo "DONE" > "$out/marker.txt"
+bash "$MSL_HARNESS/run_arm.sh" <arm-tag> <model-dir> <GB200|H200> "<phases>" "$OUT/<arm-tag>"
+rc=$?
+printf '{"job": "%s", "exit_status": %d, "elapsed_s": %d}\n' "$SLURM_JOB_ID" "$rc" "$SECONDS" > "$OUT/marker.json"
+exit "$rc"
