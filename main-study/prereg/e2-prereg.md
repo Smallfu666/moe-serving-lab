@@ -197,4 +197,17 @@ first, then E2 GB200, H200, H100, in that order. Any later experiment is funded 
 
 ## Errata
 
-None.
+**E-1 (2026-10-16, made before any E2 metric file was read).** H8-FP8 and H100-8-FP8 as registered (`--tp 8`, no
+expert parallelism) cannot start on the pinned software: every rank stops at model load with "The output_size of
+gate's and up's weight = 192 is not divisible by weight quantization block_n = 128". The model's MoE intermediate size,
+1536, split eight ways is 192, which the FP8 checkpoint's 128-wide quantization blocks cannot divide (TP2 gives 768 and
+TP4 gives 384, which divide). Two H8 launches failed this way before ready; their records contain no metrics.
+Correction: **H8-FP8 and H100-8-FP8 run `--tp 8 --ep-size 8`** (expert parallelism keeps every expert whole, so the
+1536-wide dimension is not split). Everything else in this prereg is unchanged. Consequences:
+
+- H8 runs TP8 + EP8 while H4 runs TP4 and the GB200 configurations run TP2; every reported point and ratio names its
+  parallelism, and no H8-vs-H4 difference is attributed to GPU count alone.
+- All three H8 launches are run anew with the corrected setting, after the registered H200 sequence; the failed starts
+  are recorded as configuration-defect VOIDs, not as data.
+- H100-8-FP8 uses the same correction and remains conditional on §2a.
+- Budget: project cap raised to 275 GPU-h (reserve ≥ 10) to cover the corrected H8 launches.
