@@ -13,6 +13,11 @@
 #   20+ a phase client reported bad requests (20 replay, 21 gsm8k, 22 logprob); see each record's error_kind
 #   30 stopped at the harness end time (MSL_END_EPOCH): the phase in progress was cut or the next one could not start
 #
+# Multi-node (optional): MSL_NNODES > 1 runs one server across nodes; every node runs this script with its own
+# MSL_NODE_RANK, the same MSL_DIST_ADDR (host:port of rank 0) and MSL_DONE_FILE on shared storage. Only rank 0 serves
+# HTTP and runs the phases; other ranks wait for rank 0's done file. MSL_LOCAL_GPUS is the GPU count per node
+# (default MSL_TP). MSL_SERVER_ARGS (optional) is appended to the server command and recorded in server_cmd.txt.
+#
 # MSL_END_EPOCH (optional): epoch seconds by which the launch must stop. A replay phase gets the remaining time minus
 # MSL_END_MARGIN_S as its deadline; a phase that would start with less than MSL_MIN_PHASE_S left is not started.
 set -uo pipefail
@@ -22,7 +27,11 @@ TAG=$1 MODEL=$2 EXPECT=$3 PHASES=$4 OUT=$5
 mkdir -p "$OUT"
 cd "$OUT" || exit 9
 status () { echo "$TAG $1 rc=$2 elapsed_s=$SECONDS $(date -Is)" >> "$OUT/arm_status.txt"; }
-finish () { echo "$TAG $1" >> "$OUT/arm_rc.txt"; status done "$1"; exit "$1"; }
+finish () {
+  echo "$TAG $1" >> "$OUT/arm_rc.txt"; status done "$1"
+  if [ "${MSL_NNODES:-1}" -gt 1 ] && [ "${MSL_NODE_RANK:-0}" = 0 ]; then echo "$1" > "$MSL_DONE_FILE"; fi
+  exit "$1"
+}
 
 for v in HF_HOME TRITON_CACHE_DIR TORCHINDUCTOR_CACHE_DIR XDG_CACHE_HOME TMPDIR FLASHINFER_WORKSPACE_BASE SGLANG_CACHE_DIR; do
   case "${!v:-}" in "$MSL_ROOT"/*) ;; *) echo "cache var $v=${!v:-unset} not under MSL_ROOT"; finish 8 ;; esac
@@ -34,21 +43,23 @@ want_arch=$([ "$EXPECT" = GB200 ] && echo aarch64 || echo x86_64)
 
 nvidia-smi -L > gpus.txt
 n=$(grep -c '^GPU ' gpus.txt)
-[ "$n" -eq "$MSL_TP" ] && [ "$(grep -c "$EXPECT" gpus.txt)" -eq "$n" ] || { cat gpus.txt; finish 10; }
+LOCAL=${MSL_LOCAL_GPUS:-$MSL_TP}
+[ "$n" -eq "$LOCAL" ] && [ "$(grep -c "$EXPECT" gpus.txt)" -eq "$n" ] || { cat gpus.txt; finish 10; }
 nvidia-smi topo -m > topo.txt 2>&1
 bash "$MSL_HARNESS/preflight_gpu_clean.sh" gpu_clean.txt || finish 11
 sha256sum "$MSL_REPLAY" | cut -d' ' -f1 > input_sha.txt
 [ "$(cat input_sha.txt)" = "$MSL_REPLAY_SHA" ] || finish 13
 
 ENVS=(--env PYTHONNOUSERSITE=1)
-for v in HF_HOME TRITON_CACHE_DIR TORCHINDUCTOR_CACHE_DIR XDG_CACHE_HOME TMPDIR FLASHINFER_WORKSPACE_BASE SGLANG_CACHE_DIR MSL_TP; do
+export MSL_LOCAL_GPUS=$LOCAL
+for v in HF_HOME TRITON_CACHE_DIR TORCHINDUCTOR_CACHE_DIR XDG_CACHE_HOME TMPDIR FLASHINFER_WORKSPACE_BASE SGLANG_CACHE_DIR MSL_LOCAL_GPUS; do
   ENVS+=(--env "$v=${!v}")
 done
 AX=("${MSL_CONTAINER_BIN:-apptainer}" exec --nv --cleanenv "${ENVS[@]}" --bind "$MSL_ROOT" "$MSL_SIF")
 "${AX[@]}" python3 - > ctx.txt 2>&1 <<'EOF' || finish 14
 import os, site, sys, torch, sglang
 assert site.ENABLE_USER_SITE is False, "user site enabled"
-assert torch.cuda.device_count() == int(os.environ["MSL_TP"]), torch.cuda.device_count()
+assert torch.cuda.device_count() == int(os.environ["MSL_LOCAL_GPUS"]), torch.cuda.device_count()
 assert not sglang.__file__.startswith("/home/"), sglang.__file__
 for i in range(torch.cuda.device_count()):
     x = torch.ones(1 << 28, device=f"cuda:{i}")
@@ -58,11 +69,26 @@ print("sglang", sglang.__version__, "torch", torch.__version__)
 EOF
 status preflight 0
 
-"${AX[@]}" python3 -m sglang.launch_server --model-path "$MODEL" --tp "$MSL_TP" --kv-cache-dtype bfloat16 \
-  --host 127.0.0.1 --port "$MSL_PORT" --log-level info > server.log 2>&1 &
+CMD=(python3 -m sglang.launch_server --model-path "$MODEL" --tp "$MSL_TP" --kv-cache-dtype bfloat16
+  --host 127.0.0.1 --port "$MSL_PORT" --log-level info)
+if [ "${MSL_NNODES:-1}" -gt 1 ]; then
+  CMD+=(--nnodes "$MSL_NNODES" --node-rank "$MSL_NODE_RANK" --dist-init-addr "$MSL_DIST_ADDR")
+fi
+read -ra EXTRA <<< "${MSL_SERVER_ARGS:-}"
+CMD+=("${EXTRA[@]}")
+printf '%q ' "${CMD[@]}" > server_cmd.txt; echo >> server_cmd.txt
+"${AX[@]}" "${CMD[@]}" > server.log 2>&1 &
 SERVER=$!
 stop_server () { kill -INT "$SERVER" 2>/dev/null; for _ in $(seq 60); do kill -0 "$SERVER" 2>/dev/null || return; sleep 2; done; kill -9 "$SERVER" 2>/dev/null; }
 trap stop_server EXIT
+if [ "${MSL_NNODES:-1}" -gt 1 ] && [ "${MSL_NODE_RANK:-0}" != 0 ]; then
+  status worker_started 0
+  until [ -s "$MSL_DONE_FILE" ]; do
+    kill -0 "$SERVER" 2>/dev/null || finish 19
+    sleep 10
+  done
+  finish 0
+fi
 URL=http://127.0.0.1:$MSL_PORT
 t0=$SECONDS
 until curl -sf -m 600 "$URL/health_generate" > /dev/null; do
