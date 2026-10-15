@@ -43,7 +43,7 @@ replay file. They were feasibility runs: c = 8 and c = 32 were cut after 300 s, 
 | Working set, c = 32 | 1,028,203 tokens | §8 |
 | Server load time | 6–11 min | one 2 h job per launch holds all phases on every arm |
 | Highest `#running-req` in the c = 32 smoke window | 32 on H-FP8 TP2, G-FP8 and G-NV4 | G-BATCH threshold stays at 28 |
-| Logprob response shape (smokes requested the window from the first answer token) | in all 6 smoke logprob files (1,152 items): entries = forced tokens, first entry `None`, entries 2…64 carry the forced ids, top-20 everywhere | the E1 window starts one token earlier, so 65 entries are expected |
+| Logprob response shape (smokes requested the window from the first answer token) | in all 6 smoke logprob files (960 items): entries = forced tokens, first entry `None`, entries 2…64 carry the forced ids, top-20 everywhere | the E1 window starts one token earlier, so 65 entries are expected |
 
 Pool ÷ working set at c = 32: H-FP8 0.16, G-FP8 0.50, G-NV4 0.99. At c = 8: H-FP8 0.31, G-FP8 1.00, G-NV4 1.99. So
 **every registered arm** is below the c = 32 working set and some prefix-cache eviction is expected in all of them;
