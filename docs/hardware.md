@@ -41,8 +41,8 @@ GPU counts are limited per queue, and the limits live in the scheduler's QoS set
 
 ## 3. Occupied GPUs on the development queue
 
-In 3 of our first 4 placements on the development queue, at least one assigned GPU was already holding 175–177 GiB
-(92–94 % of its memory). We have not determined what held that memory.
+In 3 of our first 4 placements on the development queue, at least one assigned GPU was already holding 175,113–177,503
+MiB (92–94 % of its memory). We have not determined what held that memory.
 
 What we do about it:
 
@@ -50,8 +50,8 @@ What we do about it:
   stops with a distinct exit code before running any arm. Such a stop is an infrastructure event, not a result.
 - Re-queuing the job did not help: it landed on the same node again. Excluding known-bad nodes at submit time was the
   only lever that worked.
-- The `--exclusive` flag is not accepted on this queue, so nodes are shared. Results from it are labelled "shared,
-  non-exclusive".
+- In one run the `--exclusive` flag was rejected on this queue, so nodes are shared. Results from it are labelled
+  "shared, non-exclusive".
 
 ## 4. GB200 is not B200
 

@@ -6,9 +6,9 @@
 
 ## Question
 
-FlashInfer added a machine-generated ("Cake") NVFP4 warp-decode MoE kernel for 1–32 tokens on SM100, and its author
-reported it faster than the existing kernel when measured alone
-(<https://github.com/flashinfer-ai/flashinfer/pull/5134>; we did not re-measure that). A draft SGLang PR wires it into
+FlashInfer's "Cake" NVFP4 warp-decode MoE kernel covers 1–32 tokens on SM100. The FlashInfer PR that extended it
+(<https://github.com/flashinfer-ai/flashinfer/pull/5134>) reports it faster than the FlashInfer baseline when measured
+alone; we did not re-measure that. A draft SGLang PR wires it into
 the server behind an environment variable (<https://github.com/sgl-project/sglang/pull/42406>), and an SGLang tracking
 issue asks for end-to-end reports of exactly this kind (<https://github.com/sgl-project/sglang/issues/42176>).
 
@@ -30,8 +30,8 @@ issue asks for end-to-end reports of exactly this kind (<https://github.com/sgl-
 | Repeats | 3 interleaved server launches per arm |
 | Accuracy | GSM8K (`sglang.test.few_shot_gsm8k` prompts), 5-shot, greedy, 1,314 questions (test lines 5–1318; lines 0–4 are the shots), two passes per arm |
 
-Timing runs were unprofiled. A separate set of launches with the profiler attached was used only to check which
-kernels ran; those numbers are never mixed with the timing table.
+Timing runs were unprofiled. A separate set of launches with the profiler attached was used to check which
+kernels ran and for the descriptive glue figures below; those numbers are never mixed with the timing table.
 
 ## Result
 
@@ -52,11 +52,11 @@ kernels and 96 `bmm_*` per step. The only fallback logged was during prefill-gra
 the route's 1..32 admission range).
 
 **Where the time may go — not resolved** (TRACE, profiler attached). With the route on, each MoE layer also runs 6
-elementwise mask/fill kernels. At concurrency 1, their span is 656.8 µs per decode step; their summed kernel time is
-about 379 µs. The span is a time window that also contains memory copies, so it is not a sum of kernel times, and it
+elementwise mask/fill kernels. At concurrency 1, their span is about 657 µs per decode step; their summed kernel time is
+376–380 µs. The span is a time window that also contains memory copies, so it is not a sum of kernel times, and it
 cannot be compared with the TPOT table. Whether the Cake kernel chain itself is faster or slower than the chain it
-replaces could not be resolved: the comparison was `NOT_EVALUABLE` because window-to-window variation in the profiled
-runs was larger than the difference.
+replaces could not be resolved: the comparison was `NOT_EVALUABLE` because the registered resolution threshold, set from
+window-to-window variation in the profiled runs, was larger than the difference.
 
 **Accuracy — exploratory** (RUNTIME). Mean of two passes per arm: 90.94 % (route off) vs 90.37 % (on). Off-vs-on pairs
 differed on 49 and 52 questions; repeating the same arm differed on 10 (off) and 5 (on). The registered accuracy
@@ -71,7 +71,7 @@ regression: confirming it would need a second pair and a layer-level check, whic
   differently.
 - Not covered: prefill, TP > 1, FP8 KV cache, SM103, the kernel's stand-alone speed.
 - No claim about why decode got slower. The extra glue kernels are where the time *may* go; that is not shown.
-- Measured on 2026-10-08/09.
+- Measured on 2026-10-08.
 
 ## What I learned
 

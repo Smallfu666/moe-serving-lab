@@ -58,6 +58,9 @@ Triton bf16, and CUTLASS FP8 block against SGLang's Triton block-FP8 path.
 - **Accuracy.** GSM8K moved by −0.0011 (0.9053 vs 0.9064), within the A/A level (`NO_CHANGE_BEYOND_AA`).
 - **Not lossless.** Two launches of the CuTe-DSL arm were not identical to each other (mean |Δlogp| 0.0277 on 64
   sequences), while the two baseline launches were token-identical.
+- **Without CUDA graphs** (run J3, its own table, never mixed with the graph table): decode TPOT was SLOWER at every
+  concurrency (r = 1.148 / 1.147 / 1.145 / 1.168), prefill TTFT at c = 1 was SLOWER (r = 1.155), and the prefill band
+  was `NOT_EVALUABLE`. No mechanism was measured for this.
 - **Dispatch** (TRACE, profiled steps at 2048/64 tokens, c = 8): every one of the 48 MoE layers ran the CuTe-DSL GEMM1
   and GEMM2 kernels once per step, and no Triton MoE kernel ran.
 
@@ -65,11 +68,12 @@ Triton bf16, and CUTLASS FP8 block against SGLang's Triton block-FP8 path.
 FASTER); decode TPOT r = 0.892 (FASTER) / 0.957 / 0.967 (WITHIN). The pre-registered pass gate passed. GSM8K moved by
 −0.0004 (0.9486 → 0.9482), `NO_CHANGE_BEYOND_AA`. No re-tuned arm, so no attribution.
 
-**4. On SGLang's pinned FlashInfer 0.7.0.post1: no usable verdict** (RECORD).
+**4. On SGLang's pinned FlashInfer 0.7.0.post1: no usable verdict** (RECORD; SGLang main `5eca4d8c` plus the same
+private runner).
 
 - Run J6: SGLang's startup autotune rewrote the saved CuTe-DSL tactic table on every CuTe-DSL launch (8 of 21 entries
-  in the first CuTe-DSL launch, 5 in the second), while baseline launches left it unchanged. A pre-registered gate exists for exactly this, so the run
-  stopped; none of its timing or accuracy numbers may be quoted.
+  in the first CuTe-DSL launch, 5 in the second), while baseline launches left it unchanged. A pre-registered gate exists for exactly
+  this, so the run stopped; none of its timing or accuracy numbers may be quoted.
 - Run J7 froze the table read-only and disabled startup autotune on both arms (not SGLang's out-of-box behaviour). The
   table held (74 hits, 0 misses per CuTe-DSL launch), but one prefill cell's A/A was too wide (`NOT_EVALUABLE`) and
   decode c = 1 was SLOWER (r = 1.035), so the pass gate was `NOT_EVALUABLE`.
@@ -81,7 +85,7 @@ FASTER); decode TPOT r = 0.892 (FASTER) / 0.957 / 0.967 (WITHIN). The pre-regist
 behaviour; **we did not find this first**, and our two environments differ by 401 FlashInfer commits plus SGLang
 changes, so the PR's effect is not isolated. The end-to-end A/B on the new stack again gave no pass verdict: on 30B the
 server crashed (segfault) when the profiler stopped in one baseline launch, so the dispatch proof failed and every
-cell was `INSTRUMENT`; and on 235B (J10) one prefill cell's A/A was 0.0855, so the band and the gate
+cell was `INSTRUMENT`, so the band and the gate were `NOT_EVALUABLE`; and on 235B (J10) one prefill cell's A/A was 0.0855, so the band and the gate
 were `NOT_EVALUABLE`.
 
 ## Limits
@@ -113,7 +117,7 @@ shapes above.
 
 ## 給作者的備註（zh-TW）
 
-這篇是私有草稿，標「等你決定」。這條線 10-13 已收成私有案例，PR 包仍是不建議發，所以這裡只放 write-up，不放 patch。要不要公開由你決定（預設：不公開）。必須照實講的：好的數字都量在 0.7.1rc4、不是當時 SGLang 釘的版本；decode c=1 變慢；不能說 lossless；沒有機制證明；tactic 表被改寫的行為是上游 PR 5705 先描述的，不是我們先發現的。「What I learned」請用你自己的話寫。
+這篇是私有草稿，標「等你決定」。這個案例只放 write-up，不放 patch；要不要公開由你決定（預設：不公開）。必須照實講的：好的數字都量在 0.7.1rc4、不是當時 SGLang 釘的版本；decode c=1 變慢；不能說 lossless；沒有機制證明；tactic 表被改寫的行為是上游 PR 5705 先描述的，不是我們先發現的。「What I learned」請用你自己的話寫。
 
 ---
 

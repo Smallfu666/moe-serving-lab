@@ -54,8 +54,9 @@ p90 1940 → 245 ms), raised burst throughput from 17.2 to 73.7 req/s (ratio 4.2
 - The main hypothesis held: going from N0 to N4 cut burst TTFT p50 from 263.15 ms to 117.18 ms. In N0, the tokenizer
   queue plus tokenize stage was a median share of 0.3279 of the time from burst start to the first chunk.
 - **A secondary prediction was falsified.** We predicted that splitting out only the detokenizer would matter little
-  (R1 in [0.80, 1.05]). It gave R1 = 0.5733. So the N0 → N4 gain cannot be attributed to parallel tokenization alone;
-  sharing one process between tokenizing and detokenizing was a large part of it.
+  (R1 in [0.80, 1.05]). It gave R1 = 0.5733. So the N0 → N4 gain cannot be attributed to parallel tokenization alone.
+- Two other predictions also missed: R4 = 0.4453 is just below the predicted 0.45–0.85 band, and the N0 tokenizer
+  share of 0.3279 is below the predicted 0.45.
 - The registered confound check stayed silent: one-at-a-time TTFT p50 ratios were 1.0351 (N4) and 0.9242 (N1), inside
   [0.80, 1.25], so no flag that the process change altered something besides burst queueing.
 

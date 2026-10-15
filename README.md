@@ -27,7 +27,7 @@ See [`main-study/`](main-study/).
 | # | Topic | Hardware | Evidence | Link |
 |---|---|---|---|---|
 | 01 | On a small engine, overlap scheduling hides almost all scheduler CPU time yet gains only 5 % throughput; splitting tokenize/detokenize work across processes cut burst TTFT p50 from 263 to 117 ms | 1 × RTX A4500 | preregistered, independently scored; one secondary prediction falsified | [01](case-studies/01-mini-sglang-cpu-overheads/) |
-| 02 | A Hopper CuTe-DSL MoE kernel wired into SGLang: faster prefill on a FlashInfer version SGLang did not pin, slower decode at c = 1, no usable verdict on the pinned version | 1 and 4 × H200 | preregistered, independently scored; **private draft, author decision pending** | [02](case-studies/02-cutedsl-moe-e2e/) |
+| 02 | A Hopper CuTe-DSL MoE kernel wired into SGLang: faster prefill with CUDA graphs on a FlashInfer version SGLang did not pin, slower decode at c = 1 and without graphs, no usable verdict on the pinned version | 1 and 4 × H200 | preregistered, independently scored; **private draft, author decision pending** | [02](case-studies/02-cutedsl-moe-e2e/) |
 | 03 | An NVFP4 MoE decode kernel reported faster alone makes end-to-end TPOT 17.6–38.1 % slower | 1 × GB200 | preregistered, independently scored; public report | [03](case-studies/03-cake-nvfp4-moe-gb200/) |
 | 04 | TensorRT-LLM's KV estimation probe ignores the host-memory budget and can be OOM-killed in a 16 GiB container | 1 × H200 | preregistered, independently scored; public report | [04](case-studies/04-trtllm-kv-probe-host-oom/) |
 

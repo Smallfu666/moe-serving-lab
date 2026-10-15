@@ -66,7 +66,7 @@ the device quota, whether a start is OOM-killed depends on how much memory the w
 
 ## Limits
 
-- "6 of 6" holds for the node state of R1 only. R3 shows an unpatched start that was not killed.
+- "6 of 6" holds for the node state of R1 only. R3 shows a default-arm start under the same 16 GiB limit that was not killed.
 - Only two tier sizes were tested in R4 (4.00 and 17.00 GiB). Where the threshold lies between them is not measured.
 - Attribution is at the level of the startup phase: the kill happened while `profiling_kv_cache_allocation` was open.
   Which allocation inside that phase tipped the cgroup over is not isolated.
@@ -107,7 +107,7 @@ Whether the default arm is killed depends on node free memory at probe time (see
 
 ## 給作者的備註（zh-TW）
 
-這篇的上限是已公開的 issue 20211 的正文，repo 版不多講任何主張。重點是一條因果鏈：估算階段刻意丟掉 `host_cache_size` → 探測改用自動 tier → 自動 tier 看的是整台節點的空閒記憶體，不是 cgroup → 節點空閒多時 tier 太大，在 16 GiB cgroup 裡被 OOM 殺掉。R3 是反例（節點空閒少、tier 小、沒死），所以「6/6」只對 R1 那次的節點狀態成立。任何跟修正有關的內容都不放進這個 repo。「What I learned」請用你自己的話寫。
+這篇的上限是已公開的 issue 20211 的正文，repo 版不多講任何主張。重點是一條因果鏈：估算階段刻意丟掉 `host_cache_size` → 探測改用自動 tier → 自動 tier 看的是整台節點的空閒記憶體，不是 cgroup → 節點空閒多時 tier 太大，在 16 GiB cgroup 裡被 OOM 殺掉。R3 是反例（節點空閒少、tier 小、沒死），所以「6/6」只對 R1 那次的節點狀態成立。「What I learned」請用你自己的話寫。
 
 ---
 
