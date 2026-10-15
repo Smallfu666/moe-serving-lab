@@ -59,7 +59,7 @@ def launch(arm_dir):
     ready = d / "ready.txt"
     if ready.exists():
         res["ready"] = ready.read_text().split()
-    log = (d / "server.log").read_text(errors="replace").splitlines() if (d / "server.log").exists() else []
+    log = (d / "server.log").read_text(errors="replace").split("\n") if (d / "server.log").exists() else []
     windows = phase_windows(d)
     for p in sorted(d.glob("replay_c*.jsonl")):
         res[p.stem] = replay_point(p)

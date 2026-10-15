@@ -162,7 +162,7 @@ def load_launch(arm_dir, n_gpus):
     d = Path(arm_dir)
     status = (d / "arm_status.txt").read_text().splitlines() if (d / "arm_status.txt").exists() else []
     done = {line.split()[1] for line in status if " rc=0 " in line}
-    log = (d / "server.log").read_text(errors="replace").splitlines() if (d / "server.log").exists() else []
+    log = (d / "server.log").read_text(errors="replace").split("\n") if (d / "server.log").exists() else []
     windows = phase_windows(d)
     out = {}
     for p in sorted(d.glob("replay_c*.jsonl")):
