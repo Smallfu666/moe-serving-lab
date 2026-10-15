@@ -1,0 +1,12 @@
+*.nsys-rep
+*.sqlite
+*.qdrep
+*.ncu-rep
+*.log
+raw/
+data/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+._*
