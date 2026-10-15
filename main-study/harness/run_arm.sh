@@ -112,8 +112,10 @@ IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do
   IFS=: read -r kind p1 p2 p3 p4 <<< "$step"
   [ "$(left)" -ge "${MSL_MIN_PHASE_S:-60}" ] || wall_stop "$step"
+  by_end=0
   if [ "$kind" = replay ] && [ -n "${MSL_END_EPOCH:-}" ]; then
-    lim=$(left); [ -n "${p4:-}" ] && [ "$p4" -lt "$lim" ] && lim=$p4
+    lim=$(left); by_end=1
+    if [ -n "${p4:-}" ] && [ "$p4" -lt "$lim" ]; then lim=$p4; by_end=0; fi
     p4=$lim
   fi
   echo "$step start $(wc -l < server.log)" >> phase_lines.txt
@@ -134,7 +136,7 @@ for step in "${steps[@]}"; do
     *) echo "unknown phase $step"; finish 9 ;;
   esac
   echo "$step end $(wc -l < server.log)" >> phase_lines.txt
-  if [ "$kind" = replay ] && grep -q '"cut_by_deadline": true' "replay_c$p1.summary.json" && [ -n "${MSL_END_EPOCH:-}" ]; then
+  if [ "$by_end" = 1 ] && grep -q '"cut_by_deadline": true' "replay_c$p1.summary.json"; then
     wall_stop "$step"
   fi
   status "$step" 0
