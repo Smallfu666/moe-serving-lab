@@ -11,6 +11,7 @@ from pathlib import Path
 from summarize_launch import max_running, phase_windows
 
 TARGETS = (25.0, 50.0, 75.0, 100.0)
+REGISTERED_TURNS = {1: 142, 4: 142, 8: 273, 16: 543, 32: 974, 64: 2021}
 
 
 def pct(values, q):
@@ -85,12 +86,76 @@ def separation(ratio_med, pair_ratios, spread, floor=0.03, cap=0.15):
     return "SEPARATED" if abs(ratio_med - 1) >= s and same_side else "NOT_SEPARATED"
 
 
-def rel_spread(values):
-    v = [x for x in values if x is not None]
+def med(values):
+    """Launch-level median: middle of three, mean of two (prereg §4); None with fewer than two."""
+    v = sorted(x for x in values if x is not None)
     if len(v) < 2:
         return None
-    m = pct(v, 0.5)
+    return v[len(v) // 2] if len(v) % 2 else (v[len(v) // 2 - 1] + v[len(v) // 2]) / 2
+
+
+def rel_spread(values):
+    v = [x for x in values if x is not None]
+    m = med(v)
     return (max(v) - min(v)) / m if m else None
+
+
+def launch_points(launch):
+    """launch: {c: point-dict}. Returns {c: (interactivity, tput)} over complete points."""
+    return {c: (p["interactivity"], p["tput_per_gpu"]) for c, p in launch.items() if p.get("complete")}
+
+
+def aggregate(launches):
+    """Per concurrency point: median point and spreads over the launches where the point is complete."""
+    pts = [launch_points(x) for x in launches]
+    out = {}
+    for c in sorted({c for p in pts for c in p}):
+        vals = [p[c] for p in pts if c in p]
+        if len(vals) < 2:
+            continue
+        out[c] = {"point": (med([v[0] for v in vals]), med([v[1] for v in vals])),
+                  "tput_spread": rel_spread([v[1] for v in vals]), "n": len(vals)}
+    return out
+
+
+def bracket(front, target):
+    """The frontier points used for `target`: the exact match, or the two that bracket it; [] outside range."""
+    for x, y in front:
+        if x == target:
+            return [(x, y)]
+    for a, b in zip(front, front[1:]):
+        if a[0] < target < b[0]:
+            return [a, b]
+    return []
+
+
+def config_view(launches):
+    """Median frontier, the spread of each median point, and per-launch frontiers."""
+    agg = aggregate(launches)
+    spread_of = {v["point"]: v["tput_spread"] for v in agg.values()}
+    return {"front": frontier([v["point"] for v in agg.values()]), "spread_of": spread_of,
+            "launch_fronts": [frontier(list(launch_points(x).values())) for x in launches]}
+
+
+def union_view(view_a, view_b):
+    """Platform view: union of two configurations' points; launch k = launch k of each."""
+    fronts = [frontier(fa + fb) for fa, fb in zip(view_a["launch_fronts"], view_b["launch_fronts"])]
+    return {"front": frontier(view_a["front"] + view_b["front"]),
+            "spread_of": {**view_a["spread_of"], **view_b["spread_of"]}, "launch_fronts": fronts}
+
+
+def matched_ratio(num, den, target, min_pairs=4):
+    """Ratio of throughput per GPU at `target` with the §5 noise rule; num/den are config or platform views."""
+    yn, yd = interpolate(num["front"], target), interpolate(den["front"], target)
+    r = yn / yd if yn is not None and yd else None
+    pn = [interpolate(f, target) for f in num["launch_fronts"]]
+    pd = [interpolate(f, target) for f in den["launch_fronts"]]
+    pairs = [a / b for a in pn if a is not None for b in pd if b]
+    spreads = [num["spread_of"].get(p) for p in bracket(num["front"], target)] + \
+              [den["spread_of"].get(p) for p in bracket(den["front"], target)]
+    s = max(spreads) if spreads and all(x is not None for x in spreads) else None
+    label = "NOT_EVALUABLE" if len(pairs) < min_pairs else separation(r, pairs, s)
+    return {"target": target, "ratio": r, "num": yn, "den": yd, "pairs": pairs, "spread": s, "label": label}
 
 
 def load_launch(arm_dir, n_gpus):
@@ -104,7 +169,8 @@ def load_launch(arm_dir, n_gpus):
         c = int(p.stem.removeprefix("replay_c"))
         summ = json.loads(p.with_name(p.stem + ".summary.json").read_text())
         phase = next((s for s in done if s.startswith(f"replay:{c}:")), None)
-        complete = phase is not None and summ["turns_done"] == summ["turns_total"] and not summ["cut_by_deadline"]
+        complete = (phase is not None and summ["turns_done"] == summ["turns_total"] == REGISTERED_TURNS.get(c)
+                    and not summ["cut_by_deadline"])
         recs = [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
         w = windows.get(phase) if phase else None
         peak = max_running(log[w["start"]:w["end"]]) if w and "end" in w else None

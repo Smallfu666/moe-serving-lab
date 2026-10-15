@@ -4,7 +4,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from e2_score import frontier, interpolate, mean_in_flight, point_metrics, rel_spread, request_rate, separation  # noqa: E402
+from e2_score import (aggregate, bracket, config_view, frontier, interpolate, matched_ratio, mean_in_flight,  # noqa: E402
+                      med, point_metrics, rel_spread, request_rate, separation, union_view)
 
 
 def rec(t_send, ttft, e2e, n, cached=0, prompt=10, error=None):
@@ -57,7 +58,57 @@ class Separation(unittest.TestCase):
 
     def test_rel_spread(self):
         self.assertAlmostEqual(rel_spread([9, 10, 11]), 0.2)
+        self.assertAlmostEqual(rel_spread([100, 120]), 20 / 110)
         self.assertIsNone(rel_spread([10]))
+
+    def test_med(self):
+        self.assertEqual(med([100, 120]), 110)
+        self.assertEqual(med([3, 1, 2]), 2)
+        self.assertIsNone(med([5]))
+
+
+def P(i, t, complete=True):
+    return {"interactivity": i, "tput_per_gpu": t, "complete": complete}
+
+
+class Aggregation(unittest.TestCase):
+    def setUp(self):
+        self.a = [{1: P(100, 10), 8: P(50, 40), 64: P(20, 80)},
+                  {1: P(102, 11), 8: P(52, 41), 64: P(21, 82)},
+                  {1: P(98, 9), 8: P(48, 39.5), 64: P(19, 78, complete=False)}]
+        self.b = [{1: P(110, 8), 8: P(60, 30), 64: P(22, 50)} for _ in range(3)]
+
+    def test_aggregate_skips_incomplete(self):
+        agg = aggregate(self.a)
+        self.assertEqual(agg[64]["n"], 2)
+        self.assertEqual(agg[64]["point"], (20.5, 81))
+        self.assertEqual(agg[1]["point"], (100, 10))
+
+    def test_bracket(self):
+        f = [(10, 1), (20, 2), (30, 3)]
+        self.assertEqual(bracket(f, 20), [(20, 2)])
+        self.assertEqual(bracket(f, 25), [(20, 2), (30, 3)])
+        self.assertEqual(bracket(f, 35), [])
+
+    def test_matched_ratio_separated(self):
+        r = matched_ratio(config_view(self.a), config_view(self.b), 50)
+        self.assertAlmostEqual(r["ratio"], 40 / (50 - 20 * 28 / 38))
+        self.assertEqual(len(r["pairs"]), 9)
+        self.assertEqual(r["label"], "SEPARATED")
+
+    def test_cut_launch_dropped_from_pairs(self):
+        r = matched_ratio(config_view(self.a), config_view(self.b), 30)
+        self.assertEqual(len(r["pairs"]), 6)
+        self.assertIsNotNone(r["ratio"])
+
+    def test_too_few_pairs(self):
+        r = matched_ratio(config_view(self.a[:1] * 1), config_view(self.b), 50)
+        self.assertEqual(r["label"], "NOT_EVALUABLE")
+
+    def test_union_view(self):
+        u = union_view(config_view(self.a), config_view(self.b))
+        self.assertIn((110, 8), u["front"])
+        self.assertEqual(len(u["launch_fronts"]), 3)
 
 
 if __name__ == "__main__":

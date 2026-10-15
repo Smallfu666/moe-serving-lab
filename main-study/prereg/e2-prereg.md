@@ -16,7 +16,7 @@ E2 is descriptive. It ranks nothing beyond the measured configurations and state
 
 | Config | Hardware | Parallelism | Checkpoint | Why this configuration |
 |---|---|---|---|---|
-| G2-FP8 | 2 × GB200 | TP2 | FP8 | single-node GB200 jobs on this cluster are limited to 1–2 GPUs (3–15 cannot be requested; ≥ 16 is multi-node and is studied separately) — a **cluster constraint, not a design choice** |
+| G2-FP8 | 2 × GB200 | TP2 | FP8 | single-node GB200 jobs on this cluster are limited to 1–2 GPUs (3–15 cannot be requested; ≥ 16 is multi-node and outside E2) — a **cluster constraint, not a design choice** |
 | G2-NV4 | 2 × GB200 | TP2 | NVFP4 | as G2-FP8 |
 | H4-FP8 | 4 × H200 | TP4 | FP8 | half a node |
 | H8-FP8 | 8 × H200 | TP8 | FP8 | one full node |
@@ -39,12 +39,13 @@ digest, runs the GSM8K phase, and records GPU name, memory, driver version and t
 - **Feasible** if the server reaches ready and GSM8K completes with zero request errors.
 - **Infeasible** (no H100 configuration; reason recorded) only if the server itself fails: exit 15, 18 or 19, or
   GSM8K records with `error_kind` `server`.
-- Any other failure (exits 8–14, 17, client-side errors) is our instrument: the smoke is re-run once; a second such
-  failure also means no H100 configuration, recorded as "not established".
+- Any other exit or failure (including client-side errors and kill signals) is our instrument: the smoke is re-run
+  once; a second such failure also means no H100 configuration, recorded as "not established".
 - Before the first H100-8-FP8 launch, the H100 cluster's SIF size and sha256, the container runtime, and any
   workaround the smoke needed are recorded as fixed inputs. The replay file rebuilt there must reproduce the sha256
   above; if it does not, there is no H100 configuration.
-- An H100-8-FP8 launch exiting 15 or 18 is `NOT_RUN` without a re-run (TP8 on that cluster never served).
+- If the first H100-8-FP8 launch exits 15 or 18 (TP8 never served on that cluster), the whole configuration is
+  `NOT_RUN`: no re-run and no further launches.
 
 ## 3. Load
 
@@ -74,9 +75,10 @@ request load of public benchmarks. Each point therefore also reports the time-we
 flight and the highest `#running-req` in the server log.
 
 **Wall time and the harness end time.** Each job has a 1 h Slurm wall; the harness end time is the job start plus
-57 min (`MSL_END_EPOCH`). A replay point gets the remaining time minus 120 s as its deadline; a phase that cannot
-start with ≥ 60 s left is not started. When the end time stops a launch, it writes its markers with exit 30
-(`wall_stop`). Terms: a phase is **complete** only if it has an `arm_status.txt` line with rc 0 and, for replay,
+53 min (`MSL_END_EPOCH`), leaving room for requests already in flight and for server shutdown. A replay point gets
+the time left before the end time minus 120 s as its deadline; a phase is not started unless at least 180 s remain
+before the end time. When the end time stops a launch, it writes its markers with exit 30 (`wall_stop`). A launch
+that hits the Slurm wall anyway is harvested from its `arm_status.txt` phase lines. Terms: a phase is **complete** only if it has an `arm_status.txt` line with rc 0 and, for replay,
 `turns_done` equals the registered turns and `cut_by_deadline` is false; a phase that was started but not complete
 is **cut**; later phases are **not started**. A missing high-concurrency point is reported as "did not complete
 within the 1 h launch".
@@ -92,9 +94,9 @@ From the per-request records:
 - Secondary: TTFT p50 and p90, prefix hit rate (Σ cached ÷ Σ prompt), throughput of the whole configuration, KV pool
   size (`max_total_num_tokens`), time-weighted mean requests in flight, highest `#running-req`.
 
-Per (configuration, point): the value is the median of its complete launches (at least two required, else the point is
-`NOT_EVALUABLE`), and its **spread** is (max − min) ÷ median over those launches, for throughput per GPU and for
-interactivity separately.
+Per (configuration, point): the value is the launch-level median over the launches where that point is complete —
+the middle value of three, the mean of two; with fewer than two the point is `NOT_EVALUABLE` — taken separately for
+throughput per GPU and for interactivity. Its **spread** is (max − min) ÷ that median, for throughput per GPU.
 
 ## 5. Frontier and matched-interactivity comparison
 
@@ -109,11 +111,19 @@ interactivity separately.
   G2-NV4 / H4-FP8, G2-NV4 / H8-FP8, G2-NV4 / G2-FP8, H8-FP8 / H4-FP8, and, if it ran, H100-8-FP8 / H8-FP8 (labelled
   "different cluster, driver and runtime"). Also reported: an **H200 platform frontier** built from the union of H4 and
   H8 points, and the ratios G2-FP8 / H200-platform and G2-NV4 / H200-platform. Unregistered ratios are not reported.
-- **Noise rule.** For one ratio at one I*: the ratio of medians r; the nine per-launch-pair ratios (launch i of the
-  numerator against launch j of the denominator, each from its own per-launch frontier); and s = the larger of the two
-  configurations' throughput spreads at the points that bracket I*. The ratio is `NOT_EVALUABLE` if s > 0.15 or any
-  of the needed values is undefined; `SEPARATED` if |r − 1| ≥ max(0.03, 2 × s) and all nine pair ratios lie on the
-  same side of 1; otherwise `NOT_SEPARATED`.
+- **Noise rule.** For one ratio at one I*:
+  - r = interpolated numerator ÷ interpolated denominator on the median frontiers;
+  - pair ratios = for every launch i of the numerator and launch j of the denominator whose own per-launch frontier
+    covers I*, the ratio of their interpolated values (up to 9 pairs; a launch whose frontier does not cover I*, for
+    example because its c = 64 point was cut, is left out of the pairs, not the medians);
+  - s = the largest throughput spread among the median-frontier points used for I* in both configurations (the
+    exact-match point, or the two bracketing points; up to four values).
+  The ratio is `NOT_EVALUABLE` if r is undefined, fewer than 4 pairs exist, or s > 0.15; `SEPARATED` if
+  |r − 1| ≥ max(0.03, 2 × s) and all pair ratios lie on the same side of 1; otherwise `NOT_SEPARATED`.
+- **H200 platform.** Its median points are the union of H4's and H8's median points; its launch k is the union of H4
+  launch k and H8 launch k; its spreads are the member points' spreads. The noise rule applies unchanged.
+- These computations are implemented, with tests, in `main-study/analysis/e2_score.py` (`config_view`,
+  `union_view`, `matched_ratio`); the independent scorer may recompute them by hand from this text, which governs.
 
 ## 6. Correctness (descriptive)
 
@@ -131,12 +141,12 @@ G-NV4 launches. A configuration whose mean GSM8K accuracy differs from its refer
 | G-BACKEND | GB200 configurations: the server log names `flashinfer_trtllm` as the selected MoE backend |
 | G-LOAD | GSM8K 1,319 records and logprob 256 records with no server-side error; every complete point has every request completed with the requested output tokens and the replay prompt length |
 
-Failures are scoped to phases. Phases completed before a failure stay valid. Classes follow E1 §6a: an instrument
-failure (including exit 30 before any sweep point completed) makes the launch VOID, and it is re-run once after a
-written analysis only if its correctness phases or fewer than two sweep points completed; a second VOID leaves it
-missing. A `wall_stop` after at least two complete sweep points is not a failure. A G-BACKEND failure makes that
-launch `NOT_EVALUABLE`; a G-LOAD failure makes the affected phase `NOT_EVALUABLE`. There are no predictions, so no
-failure stops the other configurations.
+Failures are scoped to phases: phases complete before a failure stay valid, whatever the exit code. A launch is
+**VOID** and is re-run once, after a written analysis, if a correctness phase is not complete or fewer than two sweep
+points are complete; otherwise it stands with its complete phases. A second VOID of the same launch leaves it missing.
+Failure classes for the written analysis follow E1 §6a. A G-BACKEND failure makes that launch `NOT_EVALUABLE`; a
+G-LOAD failure makes the affected phase `NOT_EVALUABLE`. There are no predictions, so no failure stops the other
+configurations.
 
 ## 8. Claim ceiling
 
@@ -182,8 +192,9 @@ E2 does not reuse their numbers, and its configurations, workload and software d
 | H100-8-FP8: 3 × 8 × 1 h (conditional) | 24 |
 | **E2 total** | **73–74** |
 
-Project cap 160 GPU-h, reserve ≥ 10. Re-run priority when budget is short: E1 registered launches first, then E2
-GB200, H200, H100, in that order.
+Project arithmetic: smoke runs 8 + E1 44 + E2 73–74 = 125–126 of a 160 cap, leaving 34–35; after the 10 reserve,
+24–25 remain for E1 and E2 re-runs and anything after E2. Re-run priority when budget is short: E1 registered launches
+first, then E2 GB200, H200, H100, in that order. Any later experiment is funded only from what remains after E2.
 
 ## Errata
 
