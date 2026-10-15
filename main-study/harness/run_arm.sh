@@ -65,7 +65,7 @@ until curl -sf -m 600 "$URL/health_generate" > /dev/null; do
 done
 echo "ready_s=$((SECONDS - t0))" > ready.txt
 grep -o 'max_total_num_tokens=[0-9]*' server.log | head -1 >> ready.txt
-grep -iE 'moe runner backend|moe_runner_backend' server.log | head -5 > backend.txt
+grep -E 'as MoE runner backend|MoE runner backend:|moe_runner_backend=' server.log | head -5 > backend.txt
 if [ "$EXPECT" = GB200 ] && [ -n "${MSL_EXPECT_BACKEND:-}" ]; then
   grep -q "Use $MSL_EXPECT_BACKEND as MoE runner backend" server.log || finish 16
 fi
