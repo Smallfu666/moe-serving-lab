@@ -11,7 +11,7 @@ from pathlib import Path
 from summarize_launch import max_running, phase_windows
 
 TARGETS = (25.0, 50.0, 75.0, 100.0)
-REGISTERED_TURNS = {1: 142, 4: 142, 8: 273, 16: 543, 32: 974, 64: 2021}
+REGISTERED_TURNS = {1: 142, 4: 142, 8: 273, 16: 543, 32: 974, 64: 2021, 128: 4219}
 
 
 def pct(values, q):
