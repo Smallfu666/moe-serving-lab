@@ -106,6 +106,18 @@ def _tokenize_one(job):
     return tid, json.dumps({"session": tid, "seq": seq, "turns": turns}, separators=(",", ":")), None
 
 
+def _iter_rows(pf, wanted):
+    """Yield (id, (trajectory, tools)) for wanted ids, one row group in memory at a time."""
+    for rg in range(pf.num_row_groups):
+        ids = pf.read_row_group(rg, columns=["trajectory_id"]).column(0).to_pylist()
+        hit = [i for i, t in enumerate(ids) if t in wanted]
+        if not hit:
+            continue
+        t = pf.read_row_group(rg, columns=["trajectory", "tools"]).take(hit)
+        for j, i in enumerate(hit):
+            yield ids[i], (t.column("trajectory")[j].as_py(), t.column("tools")[j].as_py())
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--parquet", type=Path, required=True)
@@ -122,18 +134,17 @@ def main():
     import pyarrow.parquet as pq
 
     wanted = [line.strip() for line in a.ids.read_text().splitlines() if line.strip()]
-    table = pq.read_table(a.parquet, columns=["trajectory_id", "trajectory", "tools"])
-    index = {tid: i for i, tid in enumerate(table.column("trajectory_id").to_pylist())}
-    missing = [t for t in wanted if t not in index]
+    pf = pq.ParquetFile(a.parquet)
+    jobs = dict(_iter_rows(pf, set(wanted)))
+    missing = [t for t in wanted if t not in jobs]
     if missing:
         raise SystemExit(f"{len(missing)} sampled ids not in the parquet, first: {missing[0]}")
-    traj_col, tools_col = table.column("trajectory"), table.column("tools")
-    jobs = ((tid, traj_col[index[tid]].as_py(), tools_col[index[tid]].as_py()) for tid in wanted)
+    ordered = ((tid, *jobs.pop(tid)) for tid in wanted)
 
     h, kept, skipped = hashlib.sha256(), 0, 0
     with mp.Pool(a.workers, _init_worker, (str(a.tokenizer), a.max_context, a.max_answer)) as pool, \
             a.out.open("w") as f, Path(str(a.out) + ".skipped").open("w") as fs:
-        for tid, line, reason in pool.imap(_tokenize_one, jobs, chunksize=4):
+        for tid, line, reason in pool.imap(_tokenize_one, ordered, chunksize=4):
             if line is None:
                 skipped += 1
                 fs.write(f"{tid}\t{reason}\n")
