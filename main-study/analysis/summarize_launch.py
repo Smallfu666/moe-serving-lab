@@ -36,9 +36,18 @@ def replay_point(path):
     }
 
 
-def max_running(server_log):
-    vals = [int(m) for m in re.findall(r"#running-req: (\d+)", server_log.read_text(errors="replace"))]
+def max_running(lines):
+    vals = [int(m) for line in lines for m in re.findall(r"#running-req: (\d+)", line)]
     return max(vals) if vals else None
+
+
+def phase_windows(d):
+    marks = {}
+    pl = d / "phase_lines.txt"
+    for line in pl.read_text().splitlines() if pl.exists() else []:
+        step, edge, n = line.split()
+        marks.setdefault(step, {})[edge] = int(n)
+    return marks
 
 
 def launch(arm_dir):
@@ -47,13 +56,16 @@ def launch(arm_dir):
     ready = d / "ready.txt"
     if ready.exists():
         res["ready"] = ready.read_text().split()
+    log = (d / "server.log").read_text(errors="replace").splitlines() if (d / "server.log").exists() else []
+    windows = phase_windows(d)
     for p in sorted(d.glob("replay_c*.jsonl")):
         res[p.stem] = replay_point(p)
+        c = p.stem.removeprefix("replay_c")
+        w = next((v for k, v in windows.items() if k.startswith(f"replay:{c}:") and "end" in v), None)
+        res[p.stem]["max_running_req"] = max_running(log[w["start"]:w["end"]]) if w else None
     g = d / "gsm8k.summary.json"
     if g.exists():
         res["gsm8k"] = json.loads(g.read_text())
-    if (d / "server.log").exists():
-        res["max_running_req"] = max_running(d / "server.log")
     return res
 
 

@@ -75,6 +75,7 @@ PY=("${AX[@]}" python3)
 IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do
   IFS=: read -r kind p1 p2 p3 p4 <<< "$step"
+  echo "$step start $(wc -l < server.log)" >> phase_lines.txt
   case "$kind" in
     replay)
       curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
@@ -91,6 +92,7 @@ for step in "${steps[@]}"; do
         --out logprob.jsonl > logprob.log 2>&1 || finish 22 ;;
     *) echo "unknown phase $step"; finish 9 ;;
   esac
+  echo "$step end $(wc -l < server.log)" >> phase_lines.txt
   status "$step" 0
 done
 finish 0

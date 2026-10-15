@@ -84,7 +84,7 @@ capacity and in several other factors; a `HIT` is descriptive, not proof that ca
 | G-BACKEND | GB200 launches: the server log contains `Use flashinfer_trtllm as MoE runner backend` (exit 16); the backend line of every launch is recorded |
 | G-LOAD | every request of every phase completed: no error, output tokens = requested, prompt tokens = replay prompt length |
 | G-COLD | the cache flush before each phase succeeded (exit 17) |
-| G-BATCH | in each c = 32 point, `#running-req` in the server log reaches ≥ 28 |
+| G-BATCH | within each c = 32 point (server-log lines between the phase's start and end marks in `phase_lines.txt`), `#running-req` reaches ≥ 28 |
 | G-WALL | no phase was cut by the job's wall time |
 
 Instrument VOID (G-CLEAN, G-CTX, infrastructure exits, G-WALL): that launch is re-run once after a written analysis;
