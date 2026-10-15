@@ -77,7 +77,7 @@ async def run(a):
         if not body.get("error"):
             shape = check_shape(meta, forced, a.top_k)
             if shape:
-                body = {"error": shape, "error_kind": "server"}
+                body = {"error": shape, "error_kind": "client_shape"}
         out[i] = {"session": it["session"], "turn": it["turn"], "prompt_len": it["prompt_len"],
                   "forced_ids": forced,
                   "input_token_logprobs": meta.get("input_token_logprobs"),
