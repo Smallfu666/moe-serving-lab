@@ -12,10 +12,12 @@
 #   18 server not ready within MSL_READY_TIMEOUT_S               19 server process died during a phase
 #   20+ a phase client reported bad requests (20 replay, 21 gsm8k, 22 logprob); see each record's error_kind
 #   30 stopped at the harness end time (MSL_END_EPOCH): the phase in progress was cut or the next one could not start
+#   31 multi-node rank 0: a peer rank reported a nonzero exit while rank 0 waited for the server to become ready
 #
 # Multi-node (optional): MSL_NNODES > 1 runs one server across nodes; every node runs this script with its own
 # MSL_NODE_RANK, the same MSL_DIST_ADDR (host:port of rank 0) and MSL_DONE_FILE on shared storage. Only rank 0 serves
-# HTTP and runs the phases; other ranks wait for rank 0's done file. MSL_LOCAL_GPUS is the GPU count per node
+# HTTP and runs the phases; other ranks wait for rank 0's done file. MSL_PEER_RC_GLOB (optional, rank 0) points at
+# the peers' arm_rc.txt files; rank 0 stops waiting for readiness as soon as one of them is nonzero. MSL_LOCAL_GPUS is the GPU count per node
 # (default MSL_TP). MSL_SERVER_ARGS (optional) is appended to the server command and recorded in server_cmd.txt.
 #
 # MSL_END_EPOCH (optional): epoch seconds by which the launch must stop. A replay phase gets the remaining time minus
@@ -93,6 +95,9 @@ URL=http://127.0.0.1:$MSL_PORT
 t0=$SECONDS
 until curl -sf -m 600 "$URL/health_generate" > /dev/null; do
   kill -0 "$SERVER" 2>/dev/null || { echo "server exited"; finish 15; }
+  if [ -n "${MSL_PEER_RC_GLOB:-}" ] && cat $MSL_PEER_RC_GLOB 2>/dev/null | awk '$2 != 0 {f=1} END {exit !f}'; then
+    echo "peer rank failed"; finish 31
+  fi
   [ $((SECONDS - t0)) -lt "$MSL_READY_TIMEOUT_S" ] || { echo "ready timeout"; finish 18; }
   sleep 5
 done
