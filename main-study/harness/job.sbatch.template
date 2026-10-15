@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=msl-<arm>
+#SBATCH --gres=gpu:<gpu-type>:2
+#SBATCH --time=02:00:00
+#SBATCH --mem=400G
+#SBATCH --output=<log-dir>/%j.out
+#SBATCH --error=<log-dir>/%j.err
+# Submit with: sbatch --exclude="$MSL_EXCLUDE_NODES" job.sbatch
+# SBATCH_ACCOUNT and SBATCH_PARTITION are read from the environment (see env.example.sh).
+set -euo pipefail
+source "<deployed-env.sh>"
+
+out="$MSL_ROOT/runs/$SLURM_JOB_ID"
+mkdir -p "$out"
+nvidia-smi topo -m > "$out/topo.txt"
+bash "<harness-dir>/preflight_gpu_clean.sh" "$out/gpu_clean.txt" || { echo 11 > "$out/arm_rc.txt"; exit 11; }
+
+# <arm launch, replay, GSM8K, logprob: to be written after the preregistration is frozen>
+
+echo "DONE" > "$out/marker.txt"
