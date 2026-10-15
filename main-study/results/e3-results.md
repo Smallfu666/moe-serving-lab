@@ -1,7 +1,6 @@
 # E3 results — GB200 at node scale (4 GPUs) and one server across four nodes (16 GPUs)
 
-All numbers are quoted from the independent score of E3, which an independent reviewer recomputed from the raw
-records with separate code (verdict: confirmed, wording corrections only). Rules:
+All numbers are quoted from an independent scoring of the raw per-request records under the frozen preregistration. Rules:
 [`../prereg/e3-prereg.md`](../prereg/e3-prereg.md); definitions as in E2.
 
 **Scope:** as E2 (one SGLang nightly, two public checkpoints, bf16 KV, closed-loop SWE session replay), plus: N4 is one
@@ -42,12 +41,13 @@ R16's frontier ends at 94.94 tok/s/user.
 
 - N4: every point complete on all four replicas of both jobs.
 - R16: GSM8K, logprob and c = 1, 4, 8, 16 complete in all three launches; c = 32 was cut by the 1-hour harness end
-  time in each, and c = 64 and c = 128 never started (the preregistration expected c = 128 not to fit).
+  time in each, and c = 64 and c = 128 never started (the preregistration expected c = 128 not to complete and allowed c = 64 to be cut).
 
 ## Correctness (descriptive)
 
 No configuration is flagged. Mean GSM8K accuracy: N4-FP8 95.489 %, N4-NV4 94.977 %, R16-FP8 95.123 %. Top-1 agreement
-with E1's BF16 reference: 0.970581, 0.944580, 0.970093.
+with E1's BF16 reference: 0.970581, 0.944580, 0.970093. The flag is only a 3-point accuracy test: NVFP4 at TP4+EP4
+is not shown to be accuracy-neutral, and R16 is not shown to give the same answers as N4.
 
 ## Read these numbers with their limits
 
@@ -57,6 +57,10 @@ with E1's BF16 reference: 0.970581, 0.944580, 0.970093.
   round-robin dispatch across 16 attention ranks, which the preregistration expected to hurt prefix reuse. That is a
   caveat, not an explanation: E3 does not isolate the cause.
 - N4's replicas ran concurrently in one job; their small spreads say nothing about variation between jobs.
+- N4 and G2 differ in GPU count, parallelism and node pool (different node groups of the same cluster), so N4/G2 is
+  not a GPU-count scaling result.
+- No capacity label applies to R16 in either direction (16 per-rank pools under round-robin). No rack-scale or
+  interconnect claim.
 
 ## What I learned
 
