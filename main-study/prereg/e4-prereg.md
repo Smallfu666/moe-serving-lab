@@ -91,7 +91,10 @@ overwrite earlier windows: a known J1 failure mode, caught by the mapping (one r
 **Deadlines that can end a window or an arm** (all registered): harness end time (`MSL_END_EPOCH` = job start +
 50 min; a phase needs ≥ 60 s left; replay deadline capped by it); prof_client warm timeout min(600 s, left), window
 timeout min(300 s, left), request timeout min(900 s, left); report wait min(300 s, left); arm entry gate
-(`min-left-s`); server stop ≤ 120 s; background exports run until end time + 420 s, then the marker is written and
+(`min-left-s`, compared with end time − 120 s margin, the same basis as the harness's phase gate); a profiler
+window's `/flush_cache` is retried for ≤ min(120 s, left) and the window is skipped (not the arm) if it never
+succeeds; a window whose client gave up before `Stop profiling` gets `POST /stop_profile`; no report wait for a window
+that never sent `/start_profile`; server stop ≤ 120 s; background exports run until end time + 420 s, then the marker is written and
 unfinished exports are redone on CPU afterwards; Slurm wall 60 min. The server's scheduler watchdog (300 s) is far
 above a 64-step window. Whether `cudaProfilerStop` blocks while nsys writes a report is unknown; J1 measures the time
 from the `Stop profiling` line to a stable report.
@@ -121,8 +124,9 @@ The first matching regex in `CLASSES` decides, applied to the lower-cased demang
 1. `comm` (NCCL, custom/one-shot/Lamport all-reduce, all-gather, reduce-scatter, all-to-all).
 2. `moe_gemm` (`fused_moe`, `bmm_`, grouped/cutlass/marlin MoE GEMM).
 3. `moe_other` (router, routing, top-k gating/sum, permute, finalize, align).
-4. `other_known` (norm, RoPE/rotary, sampling, act-and-mul/SiLU/GELU, quantization). It comes before attention so
-   that FlashInfer-namespaced norm/RoPE/sampling kernels are not filed as attention.
+4. `other_known` (norm, RoPE/rotary, sampling, act-and-mul/SiLU/GELU, quantization), matched on the **base name**
+   only (template arguments stripped, so `deep_gemm::fp8_gemm_kernel<…GemmType::Normal…>` stays a GEMM). It comes
+   before attention so that FlashInfer-namespaced norm/RoPE/sampling kernels are not filed as attention.
 5. `attention` (specific tokens: `flash::`, `flash_fwd`, `flashattn`, fmha, attention/attn, paged decode/prefill,
    merge-state, KV-cache writes; a bare `flash` does not match).
 6. `dense_gemm` (gemm, nvjet, cublas, cutlass, xmma, matmul, w8a8/fp8 blockwise, gemv).
@@ -184,7 +188,7 @@ transfer. That limit is part of the claim.
 |---|---|---|---|
 | G-CAP (instrument) | every window, H200 and GB200 | report exists; kernel table present; kernels on exactly TP devices; decode windows: full executions within 64 ± 4 on every device | window `INSTRUMENT`; a gate arm (J2 30B) failing stops the job (exit 40) |
 | G-BATCH | decode windows, both | probe rc 0 (all B requests streamed through the stop, none finished, no errors); the last TP0 `Decode batch` line before `Stop profiling` shows `#running-req: B` **and** `cuda graph: True`; no `Prefill batch` line between `Profiling starts` and `Stop profiling` | `NOT_STEADY` (excluded); a window whose decode lines show `cuda graph: False` is `NO_GRAPH` (a real software state, excluded, reported) |
-| G-DISTORT | decode windows, both | (a) profiled median step time ÷ **nsys-attached step time outside the capture range** (B ÷ `gen throughput` of the last `Decode batch` line with `#running-req: B` before `Profiling starts`) ≤ 1.15; (b) on the 30B model, the same ratio against the **profiler-free** arm's step time at the same B ≤ 1.15 (J1 for H200; J2's free arm for GB200, if it ran) | absolute µs from that window not quoted; shares quoted, labelled `profiler-distorted`. (b) is measured on 30B only and is transferred to 235B as an assumption, stated as such |
+| G-DISTORT | decode windows, both | (a) profiled median step time ÷ **nsys-attached step time outside the capture range** (B ÷ `gen throughput` of the last `Decode batch` line with `#running-req: B` before `Profiling starts`) ≤ 1.15; (b) on the 30B model, the same ratio against the **profiler-free** arm's step time at the same B (B ÷ `gen throughput` of that arm's last `#running-req: B` line before `Profiling starts`) ≤ 1.15; also reported, not gated: the log-based attached ÷ log-based free ratio (one instrument on both sides) (J1 for H200; J2's free arm for GB200, if it ran) | absolute µs from that window not quoted; shares quoted, labelled `profiler-distorted`. (b) is measured on 30B only and is transferred to 235B as an assumption, stated as such |
 | G-BACKEND | GB200: exit 16 (existing). Both platforms: `moe_gemm` time > 0 in every valid decode window | MoE kernels classified | `CLASSIFIER-GAP` for that configuration |
 | G-CLASS | every window, both | `gate_class_other` true and no listed ≥ 3 % kernel judged misfiled | `CLASSIFIER-GAP` flag (§5.2) |
 
@@ -215,8 +219,9 @@ instrument VOID.
   KV capacity), quote the §5.4 split as description, and attribute nothing further.
 - **F-DOM (Q1).** A class may be called the largest contributor to a ratio at matched B only if its ΔG_c ÷ ΔG ≥ 0.40
   **and** the next class is ≤ half of it, at every B ∈ {4, 8, 16} with valid windows on both sides. Otherwise the
-  reading is "no single dominant class". F-DOM may name idle time inside executions only if G-DISTORT's ratio is
-  ≤ 1.05 for both sides (node-level graph tracing adds gaps between graph nodes).
+  reading is "no single dominant class". F-DOM may name idle time inside executions only if G-DISTORT's ratios
+  (a) and, where it exists, (b) are both ≤ 1.05 for both sides (node-level graph tracing adds gaps between graph
+  nodes).
 - **F-COMM (Q2).** At every valid B ∈ {4, 8, 16}, compare (G_comm,H8 − G_comm,H4) with ΔG = G_H8 − G_H4:
   - ratio ≥ 0.50 at every valid B: "communication is the main component of H8's per-GPU deficit in decode steps";
   - ratio < 0.25 at every B: "communication is not the main component";

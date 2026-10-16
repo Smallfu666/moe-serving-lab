@@ -134,10 +134,23 @@ left () { [ -n "${MSL_END_EPOCH:-}" ] && echo $(( MSL_END_EPOCH - $(date +%s) - 
 wall_stop () { echo "$TAG $1 wall_stop left_s=$(left) $(date -Is)" >> "$OUT/arm_status.txt"; finish 30; }
 phase_fail () { kill -0 "$SERVER" 2>/dev/null || finish 19; finish "$1"; }
 cap () { local l; l=$(left); [ "$l" -lt "$1" ] && echo "$l" || echo "$1"; }
-prof_done () {
+flush_wait () {
+  local t0=$SECONDS lim
+  lim=$(cap 120)
+  until curl -sf -m 30 -X POST "$URL/flush_cache" > /dev/null; do
+    [ $((SECONDS - t0)) -lt "$lim" ] || return 1
+    sleep 3
+  done
+}
+prof_done () {  # <step> <rc> <client-json>
   echo "$1 rc=$2 $(date -Is)" >> "$OUT/prof_phases.txt"
   kill -0 "$SERVER" 2>/dev/null || finish 19
+  case "$2" in 5*) curl -s -m 60 -X POST "$URL/stop_profile" > /dev/null ;; esac
   [ -n "${MSL_NSYS_ARGS:-}" ] || return 0
+  if ! grep -q t_profile_req "$3" 2>/dev/null; then
+    echo "$1 missing wait_s=0 no_window_opened" >> "$OUT/nsys/phase_reports.txt"
+    return 0
+  fi
   local t0=$SECONDS lim seen="" new s1
   lim=$(cap 300)
   while [ $((SECONDS - t0)) -lt "$lim" ]; do
@@ -182,15 +195,15 @@ for step in "${steps[@]}"; do
       "${PY[@]}" "$MSL_HARNESS/logprob_client.py" --url "$URL" --sessions "$MSL_REPLAY" --start "$p1" --n "$p2" \
         --out logprob.jsonl > logprob.log 2>&1 || phase_fail 22 ;;
     decodeprobe)
-      curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
+      flush_wait || { prof_done "$step" flush_failed none; continue; }
       lim=$(cap 900)
       "${PY[@]}" "$MSL_HARNESS/prof_client.py" decode --url "$URL" --server-log "$OUT/server.log" --tag "${TAG}_b$p1" \
         --steps "$p3" --sessions "$MSL_REPLAY" --start "${MSL_PROBE_START:-200}" --batch "$p1" --prompt-len "$p2" \
         --warm-timeout "$(cap 600)" --window-timeout "$(cap 300)" --request-timeout "$lim" \
         --out "probe_b$p1.json" > "probe_b$p1.log" 2>&1
-      prof_done "$step" $? ;;
+      prof_done "$step" $? "probe_b$p1.json" ;;
     replayprof)
-      curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
+      flush_wait || { prof_done "$step" flush_failed none; continue; }
       "${PY[@]}" "$MSL_HARNESS/replay_client.py" --url "$URL" --sessions "$MSL_REPLAY" --concurrency "$p1" \
         --start "$p2" --count "$p3" --deadline-s "$p4" --out "replayprof_c$p1.jsonl" \
         --summary "replayprof_c$p1.summary.json" > "replayprof_c$p1.log" 2>&1 &
@@ -200,7 +213,7 @@ for step in "${steps[@]}"; do
         --out "trigger_c$p1.json" > "trigger_c$p1.log" 2>&1
       trc=$?
       wait "$rp"; rrc=$?
-      prof_done "$step" "$trc/replay=$rrc" ;;
+      prof_done "$step" "$trc/replay=$rrc" "trigger_c$p1.json" ;;
     *) echo "unknown phase $step"; finish 9 ;;
   esac
   echo "$step end $(wc -l < server.log)" >> phase_lines.txt

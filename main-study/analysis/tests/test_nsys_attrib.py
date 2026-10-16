@@ -60,6 +60,9 @@ class Attrib(unittest.TestCase):
         self.assertEqual(classify("void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<128>>"), "attention")
         self.assertEqual(classify("void flashinfer::BatchDecodeWithPagedKVCacheKernel<128>"), "attention")
         self.assertEqual(classify("void moe_align_block_size_kernel<int>"), "moe_other")
+        # real name from an earlier TRT-LLM Hopper trace (raw_515426 trace_S.json)
+        self.assertEqual(classify("void deep_gemm::fp8_gemm_kernel<128u, 128u, deep_gemm::GemmType::Normal, 4u>"),
+                         "dense_gemm")
         self.assertEqual(classify("void flashinfer::trtllm_allreduce_fusion::allreduce_fusion_kernel_oneshot_lamport"
                                   "<bf16>"), "comm")
 

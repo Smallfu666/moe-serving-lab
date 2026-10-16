@@ -28,20 +28,23 @@ CLASSES = [
     ("moe_gemm", r"fused_moe|moe_gemm|grouped_gemm|group_gemm|cutlass_moe|marlin_moe|bmm_|moe_mm|moefc|moe_fc"),
     ("moe_other", r"moe|expert|topk_softmax|topkgating|topk_sum|router|routing|permute|finalize|align_block"
                   r"|align_single_token|count_and_sort"),
-    ("other_known", r"norm|rotary|rope|sampling|topk_top_p|top_k_top_p|top_p|act_and_mul|silu|gelu|quant"),
+    ("other_known", r"norm|rotary|rope_|_rope|sampling|topk_top_p|top_k_top_p|top_p|act_and_mul|silu|gelu|quant"),
     ("attention", r"flash::|flash_fwd|flashattn|fmha|attention|attn|batchdecode|batchprefill|prefillwithkv"
                   r"|decodewithkv|paged|merge_state|mergestate|store_kv|set_kv|kvcache|kv_cache"),
     ("dense_gemm", r"gemm|nvjet|cublas|cutlass|xmma|matmul|w8a8|fp8_blockwise|deep_gemm|gemv|splitk|wgmma|tcgen"),
 ]
 CLASS_NAMES = [c for c, _ in CLASSES] + ["other"]
+BASE_NAME_CLASSES = {"other_known"}
 G_CLASS_SHARE = 0.03
 _RX = [(c, re.compile(r)) for c, r in CLASSES]
 
 
 def classify(name):
-    low = name.lower()
+    # other_known matches on the base name: template arguments such as GemmType::Normal or QuantParams would
+    # otherwise pull GEMMs into it; the other classes need the template text (FA3, FlashInfer attention).
+    low, base = name.lower(), base_name(name).lower()
     for c, rx in _RX:
-        if rx.search(low):
+        if rx.search(base if c in BASE_NAME_CLASSES else low):
             return c
     return "other"
 
