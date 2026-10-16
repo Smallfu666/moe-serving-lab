@@ -25,13 +25,16 @@ from collections import defaultdict
 CLASSES = [
     ("comm", r"nccl|allreduce|all_reduce|cross_device_reduce|allgather|all_gather|reducescatter|reduce_scatter"
              r"|alltoall|all_to_all|lamport|moe_a2a|moecomm|moe_comm|mnnvl|twoshot|oneshot|custom_ar|mscclpp"),
-    ("moe_gemm", r"fused_moe|moe_gemm|grouped_gemm|group_gemm|cutlass_moe|bmm_|moe_mm|moefc|moe_fc"),
-    ("moe_other", r"moe|expert|topk_softmax|topkgating|routing|permute|finalize|align_block|count_and_sort"),
-    ("attention", r"flash|fmha|attention|attn|batchdecode|batchprefill|prefillwithkv|decodewithkv|paged"
-                  r"|merge_state|store_kv|set_kv|kvcache|kv_cache"),
+    ("moe_gemm", r"fused_moe|moe_gemm|grouped_gemm|group_gemm|cutlass_moe|marlin_moe|bmm_|moe_mm|moefc|moe_fc"),
+    ("moe_other", r"moe|expert|topk_softmax|topkgating|topk_sum|router|routing|permute|finalize|align_block"
+                  r"|align_single_token|count_and_sort"),
+    ("other_known", r"norm|rotary|rope|sampling|topk_top_p|top_k_top_p|top_p|act_and_mul|silu|gelu|quant"),
+    ("attention", r"flash::|flash_fwd|flashattn|fmha|attention|attn|batchdecode|batchprefill|prefillwithkv"
+                  r"|decodewithkv|paged|merge_state|mergestate|store_kv|set_kv|kvcache|kv_cache"),
     ("dense_gemm", r"gemm|nvjet|cublas|cutlass|xmma|matmul|w8a8|fp8_blockwise|deep_gemm|gemv|splitk|wgmma|tcgen"),
 ]
 CLASS_NAMES = [c for c, _ in CLASSES] + ["other"]
+G_CLASS_SHARE = 0.03
 _RX = [(c, re.compile(r)) for c, r in CLASSES]
 
 
@@ -41,6 +44,26 @@ def classify(name):
         if rx.search(low):
             return c
     return "other"
+
+
+def base_name(name):
+    out, depth = [], 0
+    for ch in name:
+        if ch == "<":
+            depth += 1
+        elif ch == ">":
+            depth = max(0, depth - 1)
+        elif depth == 0:
+            out.append(ch)
+    return "".join(out).split("(")[0].strip()
+
+
+def big_kernels(by_name, total):
+    grouped = defaultdict(int)
+    for n, v in by_name.items():
+        grouped[(base_name(n), classify(n))] += v
+    return [{"base_name": b[:160], "class": c, "share_of_sum": v / total}
+            for (b, c), v in sorted(grouped.items(), key=lambda kv: -kv[1]) if total and v / total >= G_CLASS_SHARE]
 
 
 def union_len(iv):
@@ -123,6 +146,7 @@ def device_decode(kernels):
         "overlap_us_per_step": per(total - union),
         "closure_us": per(total) - per(total - union) + per(idle) - per(wall),
         "top_kernels": [{"name": n[:160], "class": classify(n), "share_of_sum": v / total} for n, v in top],
+        "kernels_ge_3pct": big_kernels(by_name, total),
         "_ex": ex, "_ks": ks,
     }
 
@@ -156,16 +180,18 @@ def device_mixed(kernels):
     ex = executions(kernels)
     lo, hi = min(s for s, *_ in kernels), max(e for _, e, *_ in kernels)
     in_ex = union_len([(s, e) for s, e, _ in ex])
-    sums_in, sums_out = defaultdict(int), defaultdict(int)
+    sums_in, sums_out, by_name = defaultdict(int), defaultdict(int), defaultdict(int)
     starts = [s for s, _, _ in ex]
     for s, e, _, name, _ in kernels:
         i = bisect.bisect_right(starts, s) - 1
         inside = i >= 0 and e <= ex[i][1]
         (sums_in if inside else sums_out)[classify(name)] += e - s
+        by_name[name] += e - s
     return {"window_us": (hi - lo) / 1e3, "decode_executions": len(ex), "decode_execution_span_us": in_ex / 1e3,
             "union_us": union_len([(s, e) for s, e, *_ in kernels]) / 1e3,
             "class_us_inside_decode": {c: sums_in.get(c, 0) / 1e3 for c in CLASS_NAMES},
-            "class_us_outside_decode": {c: sums_out.get(c, 0) / 1e3 for c in CLASS_NAMES}}
+            "class_us_outside_decode": {c: sums_out.get(c, 0) / 1e3 for c in CLASS_NAMES},
+            "kernels_ge_3pct": big_kernels(by_name, sum(by_name.values()))}
 
 
 def analyse(path, mode, expect_devices, expect_steps=None):
@@ -186,6 +212,8 @@ def analyse(path, mode, expect_devices, expect_steps=None):
             out["gate_steps"] = all(abs(v.get("executions", 0) - expect_steps) <= 4 for v in devs.values())
     else:
         out["per_device"] = {str(d): device_mixed(k) for d, k in per_dev.items()}
+    out["gate_class_other"] = not any(k["class"] == "other" for v in out["per_device"].values()
+                                      for k in v.get("kernels_ge_3pct", []))
     return out
 
 

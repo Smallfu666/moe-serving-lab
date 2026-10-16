@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from nsys_attrib import analyse, classify  # noqa: E402
 
 NAMES = {1: "fused_moe_kernel", 2: "ncclDevKernel_AllReduce_Sum_bf16_RING_LL", 3: "flash_fwd_splitkv_kernel",
-         4: "nvjet_tst_64x8_64x16_4x1_v_bz_TNT", 5: "rmsnorm_kernel", 6: "top_k_top_p_sampling"}
+         4: "nvjet_tst_64x8_64x16_4x1_v_bz_TNT", 5: "rmsnorm_kernel", 6: "top_k_top_p_sampling", 7: "void mystery_kernel<int>"}
 
 
 def make_db(path, per_dev):
@@ -36,13 +36,32 @@ def step(t0, corr, comm_ns):
 
 
 class Attrib(unittest.TestCase):
+    def test_gate_class_other_fires(self):
+        rows = [(0, 1000, 1, 1, 7), (1000, 2000, 1, 7, 7), (10_000, 11_000, 2, 1, 7), (11_000, 12_000, 2, 7, 7)]
+        with tempfile.TemporaryDirectory() as d:
+            make_db(d + "/r.sqlite", {0: rows})
+            self.assertFalse(analyse(d + "/r.sqlite", "decode", 1)["gate_class_other"])
+
     def test_classify(self):
         self.assertEqual([classify(NAMES[i]) for i in range(1, 7)],
-                         ["moe_gemm", "comm", "attention", "dense_gemm", "other", "other"])
+                         ["moe_gemm", "comm", "attention", "dense_gemm", "other_known", "other_known"])
         self.assertEqual(classify("void moe::dev::routing::routingIndicesClusterKernel<float>"), "moe_other")
         self.assertEqual(classify("bmm_E4m3_E4m3E4m3_Fp32_t128x8x128u2_s6_et64x8_m64x8x32"), "moe_gemm")
         self.assertEqual(classify("allreduce_fusion_kernel_oneshot_lamport<bf16>"), "comm")
         self.assertEqual(classify("fmhaSm100fKernel_QkvE4m3OBfloat16"), "attention")
+        # names seen in earlier SGLang H200 traces (perf-scout run 461068 analysis, kcensus CSVs)
+        self.assertEqual(classify("kernel_cutlass_kernel_flashinfernormkernelsfused_add_rmsnormFusedAddRMSNormKernel"
+                                  "_object_at__tensorp"), "other_known")
+        self.assertEqual(classify("void flashinfer::BatchQKApplyRotaryPosIdsCosSinCacheHeadParallelismKernel<true>"),
+                         "other_known")
+        self.assertEqual(classify("void flashinfer::sampling::TopKTopPSamplingFromProbKernel<1024>"), "other_known")
+        self.assertEqual(classify("void flashinfer::activation::act_and_mul_kernel<bf16>"), "other_known")
+        self.assertEqual(classify("void cutlass::device_kernel<flashinfer::gemm::GemmFp4Sm100<bf16>>"), "dense_gemm")
+        self.assertEqual(classify("void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<128>>"), "attention")
+        self.assertEqual(classify("void flashinfer::BatchDecodeWithPagedKVCacheKernel<128>"), "attention")
+        self.assertEqual(classify("void moe_align_block_size_kernel<int>"), "moe_other")
+        self.assertEqual(classify("void flashinfer::trtllm_allreduce_fusion::allreduce_fusion_kernel_oneshot_lamport"
+                                  "<bf16>"), "comm")
 
     def test_decode_window(self):
         per_dev = {0: [], 1: []}
@@ -60,7 +79,10 @@ class Attrib(unittest.TestCase):
         self.assertAlmostEqual(d0["step_us_mean"], 10.0)
         self.assertAlmostEqual(d0["class_us_per_step"]["moe_gemm"], 3.0)
         self.assertAlmostEqual(d0["class_us_per_step"]["comm"], 1.0)
-        self.assertAlmostEqual(d0["class_us_per_step"]["other"], 0.5)
+        self.assertAlmostEqual(d0["class_us_per_step"]["other_known"], 0.5)
+        self.assertTrue(res["gate_class_other"])
+        self.assertEqual({k["class"] for k in d0["kernels_ge_3pct"]}, {"moe_gemm", "comm", "attention", "dense_gemm",
+                                                                       "other_known"})
         self.assertAlmostEqual(d0["idle_us_per_step"], 10.0 - 7.5)
         self.assertAlmostEqual(d0["idle_between_executions_us_per_step"], 3.0 - 0.5)
         self.assertAlmostEqual(d0["idle_inside_executions_us_per_step"], 0.0)

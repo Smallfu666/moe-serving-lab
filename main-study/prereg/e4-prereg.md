@@ -11,11 +11,12 @@ model, the E2 configurations, short profiler-attached windows.
 
 - **Q1.** For G2-FP8 (2 × GB200, TP2), G2-NV4 (2 × GB200, TP2, NVFP4) and H4-FP8 (4 × H200, TP4), how is decode-step
   GPU time per output token split across MoE GEMM, other MoE kernels, attention, dense GEMM, communication, other
-  kernels and idle time? Which classes carry the per-GPU throughput differences behind E2's G2-FP8/H4 ratios
-  (2.0080 / 2.1141 / 2.1756) and G2-NV4/H4 ratios (3.3202 / 3.9475 / 4.3252) at 50 / 75 / 100 tok/s/user?
+  kernels and idle time, and how does the per-token decode GPU-time difference split by class (description)? The
+  split is bridged to E2's G2-FP8/H4 ratios (2.0080 / 2.1141 / 2.1756) and G2-NV4/H4 ratios
+  (3.3202 / 3.9475 / 4.3252) at 50 / 75 / 100 tok/s/user only where F-BRIDGE holds.
 - **Q2.** For H8-FP8 (8 × H200, TP8 + EP8) against H4-FP8, how large are communication (split into a transfer estimate
-  and waiting for other ranks), idle time and kernel-busy GPU time per output token? These are the terms behind
-  E2's H8/H4 ratios of 0.6158 / 0.5347 / 0.2827.
+  and waiting for other ranks), idle time and kernel-busy GPU time per output token? The comparison is bridged to
+  E2's H8/H4 ratios (0.6158 / 0.5347 / 0.2827) only where F-BRIDGE holds.
 - **Q3.** Why is R16 (16 × GB200, TP16 + attention-DP16 + EP16, round-robin) at 0.02028 / 0.02781 of N4 per GPU?
   This is answered **on CPU only**, from the E3 logs and configuration (§8). No GPU job is registered for Q3.
 
@@ -39,15 +40,36 @@ is not assumed; G-CAP tests it on each window.
 
 | Job | Hardware | Arms, in order | Purpose |
 |---|---|---|---|
-| J1 | 1 × H200 (`dev`) | `e4-j1-30b`: Qwen3-30B-A3B-FP8, TP1, all five windows of §4 | rung 1: capture, clients, export, attribution end to end |
-| J2 | 2 × GB200 (`gb200-dev`) | `e4-g2-30b` (30B FP8, TP2, one window `decodeprobe:4`; **gate arm**), then G2-FP8, then G2-NV4 | multi-rank capture on aarch64, then the two GB200 configs |
-| J3 | 8 × H200 (`dev`) | H8-FP8 (TP8 + EP8, all 8 GPUs), then H4-FP8 (TP4 on GPUs 0–3 via `MSL_GPU_SUBSET`) | both H200 configs in one allocation |
+| J1 | 1 × H200 (`dev`) | `e4-j1-30b`: Qwen3-30B-A3B-FP8, TP1, all five windows of §4; then `e4-j1-30b-free`: the four decode windows with **no profiler attached** | rung 1: capture, clients, export, attribution end to end; nsys-attached startup time; profiler-free reference |
+| J2 | 2 × GB200 (`gb200-dev`) | `e4-g2-30b` (30B FP8, TP2, one window; **gate arm**), then G2-NV4, then G2-FP8, then (if time remains) `e4-g2-30b-free` | multi-rank capture on aarch64, then the two GB200 configs (the slowest-loading one first), then the profiler-free reference |
+| J3 | 8 × H200 (`dev`) | `e4-h-30b` (30B FP8, TP2 on GPUs 0–1; **gate arm**), then H8-FP8 (TP8 + EP8, all 8 GPUs), then H4-FP8 (TP4 on GPUs 0–3 via `MSL_GPU_SUBSET`), then (if time remains) `e4-h-30b-free` | multi-rank capture on x86, then both H200 configs in one allocation |
 
 - H4 inside an 8-GPU job is one change from E2: four GPUs of the node sit idle and other tenants cannot use them.
   It is recorded, not corrected.
 - Subset mechanism: the container gets `CUDA_VISIBLE_DEVICES=0,1,2,3`, and the existing context check requires
   `torch.cuda.device_count() == 4`, so a subset that leaks fails with exit 14.
-- Ladder: J2 and J3 are submitted only after J1 passes (§6). Each runs once. J3 does not wait for J2.
+- Ladder: J2 and J3 are submitted only after J1 passes (§6) **and** J1's `kernels_ge_3pct` lists (every kernel
+  base name with ≥ 3 % of a window's kernel sum, with its class) have been checked by the reviewer of this file
+  (diff-only). Each runs once. J3 does not wait for J2; each carries its own gate arm.
+
+**Exact submissions** (login node, from `$WS`; arm = `tag|model|tp|server-args|gpu-subset|phases|gate|nsys|min-left-s`):
+
+```
+P4=decodeprobe:1:16384:64,decodeprobe:4:16384:64,decodeprobe:8:16384:64,decodeprobe:16:16384:64,replayprof:8:52:8:150:45:150
+PD=decodeprobe:1:16384:64,decodeprobe:4:16384:64,decodeprobe:8:16384:64,decodeprobe:16:16384:64
+PG=decodeprobe:4:16384:64
+F8=Qwen3-235B-A22B-Instruct-2507-FP8 N4=Qwen3-235B-A22B-Instruct-2507-NVFP4 S=Qwen3-30B-A3B-FP8
+J1: bash jobs/submit_e4.sh h200 1 01:00:00 -- H200 "e4-j1-30b|$S|1|||$P4|0|1|0" "e4-j1-30b-free|$S|1|||$PD|0|0|600"
+J2: bash jobs/submit_e4.sh gb200 2 01:00:00 -- GB200 "e4-g2-30b|$S|2|||$PG|1|1|0" "e4-g2nv4|$N4|2|||$P4|0|1|1300" \
+      "e4-g2fp8|$F8|2|||$P4|0|1|1000" "e4-g2-30b-free|$S|2|||$PD|0|0|500"
+J3: bash jobs/submit_e4.sh h200 8 01:00:00 -- H200 "e4-h-30b|$S|2||0,1|$PG|1|1|0" "e4-h8|$F8|8|--ep-size 8||$P4|0|1|1000" \
+      "e4-h4|$F8|4||0,1,2,3|$P4|0|1|900" "e4-h-30b-free|$S|2||0,1|$PD|0|0|500"
+```
+
+Each is first run as `submit_e4.sh <family> <n> <time> --test-only -- <arms>`. `min-left-s` values are E2 ready
+times (G2-NV4 602–627 s, G2-FP8 407–422 s, H8 262–392 s) plus about 8 min of windows. J1 records the nsys-attached
+ready time; if it exceeds the unprofiled 30B ready time by more than 50 %, the J2/J3 fit is re-checked (diff-only
+review) before they are submitted.
 
 ## 4. Capture windows (per arm)
 
@@ -60,8 +82,19 @@ is not assumed; G-CAP tests it on each window.
    150 forward steps are recorded starting 45 s in. This window mixes prefill and decode and is only used to split
    time between decode and everything else (§5.4).
 
-`/flush_cache` runs before each window. The client waits for the server log's `Stop profiling` count to increase.
-The windows are short: 64 or 150 steps, never a whole run.
+`/flush_cache` runs before each window. The client waits for the server log's `Stop profiling` count to increase;
+the harness then waits (≤ 300 s, capped by the end time) for a new report file whose size is stable for 10 s and maps
+it to that window (`nsys/phase_reports.txt`); a window with no report is `missing`. A profiler window that fails
+never ends the arm unless the server died. If nsys does not number reports in repeat mode, `--force-overwrite` would
+overwrite earlier windows: a known J1 failure mode, caught by the mapping (one report for several windows).
+
+**Deadlines that can end a window or an arm** (all registered): harness end time (`MSL_END_EPOCH` = job start +
+50 min; a phase needs ≥ 60 s left; replay deadline capped by it); prof_client warm timeout min(600 s, left), window
+timeout min(300 s, left), request timeout min(900 s, left); report wait min(300 s, left); arm entry gate
+(`min-left-s`); server stop ≤ 120 s; background exports run until end time + 420 s, then the marker is written and
+unfinished exports are redone on CPU afterwards; Slurm wall 60 min. The server's scheduler watchdog (300 s) is far
+above a 64-step window. Whether `cudaProfilerStop` blocks while nsys writes a report is unknown; J1 measures the time
+from the `Stop profiling` line to a stable report.
 
 ## 5. Attribution rules (frozen; implemented in `analysis/nsys_attrib.py`)
 
@@ -86,18 +119,27 @@ The windows are short: 64 or 150 steps, never a whole run.
 The first matching regex in `CLASSES` decides, applied to the lower-cased demangled name. The order is:
 
 1. `comm` (NCCL, custom/one-shot/Lamport all-reduce, all-gather, reduce-scatter, all-to-all).
-2. `moe_gemm` (`fused_moe`, `bmm_`, grouped/cutlass MoE GEMM).
-3. `moe_other` (routing, top-k gating, permute, finalize, align).
-4. `attention` (flash, fmha, paged decode/prefill, KV-cache writes).
-5. `dense_gemm` (gemm, nvjet, cublas, cutlass, xmma, matmul, w8a8/fp8 blockwise, gemv).
-6. `other`: everything else (norms, activations, quantization, RoPE, sampling, elementwise).
+2. `moe_gemm` (`fused_moe`, `bmm_`, grouped/cutlass/marlin MoE GEMM).
+3. `moe_other` (router, routing, top-k gating/sum, permute, finalize, align).
+4. `other_known` (norm, RoPE/rotary, sampling, act-and-mul/SiLU/GELU, quantization). It comes before attention so
+   that FlashInfer-namespaced norm/RoPE/sampling kernels are not filed as attention.
+5. `attention` (specific tokens: `flash::`, `flash_fwd`, `flashattn`, fmha, attention/attn, paged decode/prefill,
+   merge-state, KV-cache writes; a bare `flash` does not match).
+6. `dense_gemm` (gemm, nvjet, cublas, cutlass, xmma, matmul, w8a8/fp8 blockwise, gemv).
+7. `other`: everything else.
+
+The unit tests classify real kernel names from earlier SGLang H200 traces (FlashInfer fused-add-RMSNorm, RoPE) plus
+constructed FlashInfer sampling/activation/FP4-GEMM names.
 
 Fused all-reduce + RMSNorm kernels count as `comm`. The Triton `fused_moe_kernel` on H200 includes its own
 activation-quantize prologue, and this is not separated out.
 
-**G-CLASS (classifier gap).** A single kernel name in `other` can hold ≥ 3 % of a window's kernel sum. When that
-happens, the configuration's tables list that kernel on its own row, flagged `CLASSIFIER-GAP`, and it is not
-reassigned. Changing the regex needs a dated erratum with independent review; both versions are then reported.
+**G-CLASS (classifier gap).** Kernel names are grouped by base name (template arguments and parameter lists
+stripped). `nsys_attrib.py` lists every base name with ≥ 3 % of a window's kernel sum, in **any** class, with its
+class (`kernels_ge_3pct`), and sets `gate_class_other` false if one of them is in `other`. A false gate, or a listed
+kernel the scorer judges misfiled, makes the configuration's tables show that kernel on its own row, flagged
+`CLASSIFIER-GAP`; it is not reassigned. Changing the regex needs a dated erratum with independent review; both
+versions are then reported.
 
 ### 5.3 Per-token GPU time and ratios
 
@@ -117,7 +159,8 @@ These definitions give:
   r range is not evaluable.
 - **Class contributions to a difference at matched B:** ΔG_c ÷ ΔG with ΔG = G_Y − G_X. Idle is counted as one class,
   and overlap enters with a negative sign. The contributions sum to 1 by construction, so they are a description,
-  not evidence of cause.
+  not evidence of cause. If |ΔG| < 5 % of G_Y, the contributions at that B are `NOT_EVALUABLE` (they would blow up or
+  flip sign).
 
 ### 5.4 Mixed window (replay c = 8)
 
@@ -140,10 +183,10 @@ transfer. That limit is part of the claim.
 | Gate | Applies to | Passes when | On failure |
 |---|---|---|---|
 | G-CAP (instrument) | every window, H200 and GB200 | report exists; kernel table present; kernels on exactly TP devices; decode windows: full executions within 64 ± 4 on every device | window `INSTRUMENT`; a gate arm (J2 30B) failing stops the job (exit 40) |
-| G-BATCH | decode windows, both | probe rc 0 (all B requests streamed through the stop, none finished, no errors); the last TP0 `Decode batch` line before `Stop profiling` shows `#running-req: B`; no `Prefill batch` line between `Profiling starts` and `Stop profiling` | window `NOT_STEADY`, excluded |
-| G-DISTORT | decode windows, both | profiled median step time ÷ unprofiled step time ≤ 1.15. Unprofiled = B ÷ `gen throughput` of the last `Decode batch` line with `#running-req: B` before `Profiling starts` | absolute µs from that window not quoted; shares quoted, labelled `profiler-distorted` |
+| G-BATCH | decode windows, both | probe rc 0 (all B requests streamed through the stop, none finished, no errors); the last TP0 `Decode batch` line before `Stop profiling` shows `#running-req: B` **and** `cuda graph: True`; no `Prefill batch` line between `Profiling starts` and `Stop profiling` | `NOT_STEADY` (excluded); a window whose decode lines show `cuda graph: False` is `NO_GRAPH` (a real software state, excluded, reported) |
+| G-DISTORT | decode windows, both | (a) profiled median step time ÷ **nsys-attached step time outside the capture range** (B ÷ `gen throughput` of the last `Decode batch` line with `#running-req: B` before `Profiling starts`) ≤ 1.15; (b) on the 30B model, the same ratio against the **profiler-free** arm's step time at the same B ≤ 1.15 (J1 for H200; J2's free arm for GB200, if it ran) | absolute µs from that window not quoted; shares quoted, labelled `profiler-distorted`. (b) is measured on 30B only and is transferred to 235B as an assumption, stated as such |
 | G-BACKEND | GB200: exit 16 (existing). Both platforms: `moe_gemm` time > 0 in every valid decode window | MoE kernels classified | `CLASSIFIER-GAP` for that configuration |
-| G-CLASS | every window, both | no single `other` kernel ≥ 3 % of kernel sum | `CLASSIFIER-GAP` flag (§5.2) |
+| G-CLASS | every window, both | `gate_class_other` true and no listed ≥ 3 % kernel judged misfiled | `CLASSIFIER-GAP` flag (§5.2) |
 
 Every gate can fail on both platforms. G-CAP fails on a single-device report from a TP2+ run. G-BATCH fails when the
 B−1 admission trap appears (`TRAPS.md` §8) or a request ends early. G-DISTORT fails under heavy node-level graph
@@ -151,8 +194,9 @@ tracing. G-BACKEND and G-CLASS fail when a MoE GEMM name matches no class regex.
 each record each gate reads is produced on H200, and the J2 gate arm shows the same on GB200.
 
 **Ladder rule.** J1 passes when its five windows pass G-CAP, at least three of its four decode windows pass G-BATCH,
-and `nsys_attrib.py` runs on every report. Otherwise there is a written analysis, then one re-run (an instrument VOID)
-or a stop (a design defect, owner ruling).
+`nsys_attrib.py` runs on every report, and the free arm logs a `Decode batch` line at each B. Otherwise there is a
+written analysis, then the one re-run (an instrument VOID) or a stop (a design defect, owner ruling). The gate arms of
+J2 and J3 must pass G-CAP on 2 devices, or the job stops (exit 40) before any 235B arm.
 
 **Stop rules.** A gate failure in a frozen design stops the job; it is not rescued. An instrument VOID gets one re-run
 after a written analysis. No running or pending job is cancelled. If J2 or J3 leaves a configuration with fewer than
@@ -162,15 +206,19 @@ instrument VOID.
 ## 7. Registered readings (falsifiers)
 
 - **F-BRIDGE (Q1, Q2).** At each target where both sides are evaluable, compare the decode-only throughput-per-GPU
-  ratio with E2's ratio at the same tok/s/user. E2 interactivity is also a per-request decode rate, but E2
-  throughput includes prefill time. If decode-only ÷ E2 ∉ [0.77, 1.30], decode steps do not account for the E2 ratio
+  ratio with E2's ratio at the same tok/s/user. E2 interactivity is also a per-request decode rate, but its
+  (out − 1) ÷ (e2e − TTFT) includes time a request spends stalled behind other requests' prefill, which E4's
+  r = 10⁶ ÷ T does not; and E2 throughput includes prefill time. With B ≤ 16 at L = 16,384, some targets may fall
+  outside a configuration's r range, so matched-interactivity ratios are expected to be partly `NOT_EVALUABLE`;
+  the matched-B view is then the only one reported. If decode-only ÷ E2 ∉ [0.77, 1.30], decode steps do not account for the E2 ratio
   at that target. The write-up must then say that the rest lies outside decode steps (prefill, interleaving,
   KV capacity), quote the §5.4 split as description, and attribute nothing further.
 - **F-DOM (Q1).** A class may be called the largest contributor to a ratio at matched B only if its ΔG_c ÷ ΔG ≥ 0.40
   **and** the next class is ≤ half of it, at every B ∈ {4, 8, 16} with valid windows on both sides. Otherwise the
-  reading is "no single dominant class".
+  reading is "no single dominant class". F-DOM may name idle time inside executions only if G-DISTORT's ratio is
+  ≤ 1.05 for both sides (node-level graph tracing adds gaps between graph nodes).
 - **F-COMM (Q2).** At every valid B ∈ {4, 8, 16}, compare (G_comm,H8 − G_comm,H4) with ΔG = G_H8 − G_H4:
-  - ratio ≥ 0.50: "communication is the main component of H8's per-GPU deficit in decode steps";
+  - ratio ≥ 0.50 at every valid B: "communication is the main component of H8's per-GPU deficit in decode steps";
   - ratio < 0.25 at every B: "communication is not the main component";
   - otherwise: "partial".
 
@@ -180,6 +228,14 @@ instrument VOID.
   it are not evaluable. This is not a result about the software.
 
 Instrument buckets take precedence: a window that fails G-CAP or G-BATCH contributes to no reading.
+
+**Threshold rationale.** 1.15 (G-DISTORT): the order of the profiler-attached host shift seen before (TRAPS §8
+Line B) and small next to the ≥ 2× ratios under study; 1.05 for idle claims because idle is the term the profiler
+itself inflates. 3 % (G-CLASS): below it a misfiled kernel cannot move a class share by more than 3 points.
+[0.77, 1.30] (F-BRIDGE): about ±25–30 %, wider than E2's launch spreads, so a miss is not noise. 0.40 / ½ (F-DOM):
+"largest" must also be clearly ahead of the second. 0.50 / 0.25 (F-COMM): majority vs minor. "Half the largest
+execution": a decode graph runs every layer, so prefill pieces and helper graphs fall well below it. 5 % of G_Y
+(|ΔG| floor): below it the contributions are a ratio of small differences. None is derived from E4 data.
 
 ## 8. Q3 (CPU only; exploratory, disclosed)
 
@@ -192,6 +248,9 @@ map to timestamps for worker logs). Per point it computes:
 - the fraction of `Decode batch` lines with `cuda graph: False`;
 - the median per-request decode rate in lines with and without a graph;
 - the per-rank running-request count.
+
+`q3_logs.py` maps worker logs by timestamps of 1 s resolution, and its per-request decode rate is a per-line estimate
+(`gen throughput` ÷ `#running-req`), not a per-request measurement, so it is not comparable to E2 interactivity.
 
 Source anchors are at `a6a8c56015b8`. Q3 is reported with the label `source+runtime, observational`. There is no
 counterfactual run. The cheapest discriminating runs would be R16 with prefix-aware dispatch, or a 4-node replica
@@ -220,16 +279,17 @@ No cost, energy or ranking statement. Hardware facts used in the write-up cite `
 
 - **Billing.** Only the project whose wallet name contains 「測試計畫」, balance 1,401.4171 SU at planning. Its ID is
   resolved at submit time and never written down.
-- **Rates.** Worst case until measured: H200 60 SU/GPU-h, GB200 100 SU/GPU-h, whole hours per job. Every job is
+- **Rates.** Every E4 decision uses the worst case, H200 60 SU/GPU-h and GB200 100 SU/GPU-h, whole hours per job
+  (the wallet display can stay flat for hours and then drop, `serving-benchmark-study` lesson 14). Every job is
   capped at 1 h of wall (`--time 01:00:00`; harness end time 50 min).
 - **Worst-case cost:**
   - J1: 1 GPU-h → 60 SU;
   - J2: 2 GPU-h → 200 SU;
   - J3: 8 GPU-h → 480 SU;
-  - total 740 SU, plus one 480 SU instrument re-run at most → 1,220 SU.
-- **Rate check.** The real rate is measured from the wallet delta after J1 (and re-checked after some hours). The
-  wallet and `sacct` billed GPU-h are logged before every batch. Before any job whose worst case could take the
-  balance below zero, stop and report.
+  - total 740 SU, plus **one** instrument re-run in all of E4 (not one per job), ≤ 480 SU → 1,220 SU.
+- **Tracking.** Billed GPU-h come from `sacct` (whole hours per job), plus queued and running jobs counted as spent.
+  The wallet is logged before every batch as a floor check only; an observed rate is recorded for information and
+  changes no decision. Before any job whose worst case could take the balance below zero, stop and report.
 
 ## 11. Scoring and write-up
 

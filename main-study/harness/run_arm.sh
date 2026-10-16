@@ -13,7 +13,8 @@
 #   16 expected MoE backend not in log                           17 cache flush refused
 #   18 server not ready within MSL_READY_TIMEOUT_S               19 server process died during a phase
 #   20+ a phase client reported bad requests (20 replay, 21 gsm8k, 22 logprob); see each record's error_kind
-#   23 decodeprobe window failed, 24 replayprof profiler trigger failed (see the phase's JSON for prof_client's rc)
+#   Profiler phases never end the arm unless the server died (19): each window's prof_client rc goes to prof_phases.txt
+#   and its report (or "missing") to nsys/phase_reports.txt, after waiting for the report file to stop growing.
 #   30 stopped at the harness end time (MSL_END_EPOCH): the phase in progress was cut or the next one could not start
 #   31 multi-node rank 0: a peer rank reported a nonzero exit while rank 0 waited for the server to become ready
 #
@@ -95,6 +96,7 @@ if [ -n "${MSL_NSYS_ARGS:-}" ]; then
   mkdir -p "$OUT/nsys"
   read -ra NSYS <<< "$MSL_NSYS_ARGS"
   CMD=(nsys profile "${NSYS[@]}" -o "$OUT/nsys/$TAG" --force-overwrite=true "${CMD[@]}")
+  : > "$OUT/nsys/claimed.txt"
 fi
 printf '%q ' "${CMD[@]}" > server_cmd.txt; echo >> server_cmd.txt
 "${AX[@]}" "${CMD[@]}" > server.log 2>&1 &
@@ -131,6 +133,25 @@ PY=("${AX[@]}" python3)
 left () { [ -n "${MSL_END_EPOCH:-}" ] && echo $(( MSL_END_EPOCH - $(date +%s) - ${MSL_END_MARGIN_S:-120} )) || echo 999999; }
 wall_stop () { echo "$TAG $1 wall_stop left_s=$(left) $(date -Is)" >> "$OUT/arm_status.txt"; finish 30; }
 phase_fail () { kill -0 "$SERVER" 2>/dev/null || finish 19; finish "$1"; }
+cap () { local l; l=$(left); [ "$l" -lt "$1" ] && echo "$l" || echo "$1"; }
+prof_done () {
+  echo "$1 rc=$2 $(date -Is)" >> "$OUT/prof_phases.txt"
+  kill -0 "$SERVER" 2>/dev/null || finish 19
+  [ -n "${MSL_NSYS_ARGS:-}" ] || return 0
+  local t0=$SECONDS lim seen="" new s1
+  lim=$(cap 300)
+  while [ $((SECONDS - t0)) -lt "$lim" ]; do
+    new=$(ls -1 "$OUT"/nsys/*.nsys-rep 2>/dev/null | grep -vxF -f "$OUT/nsys/claimed.txt" | head -1)
+    if [ -n "$new" ]; then
+      s1=$(stat -c %s "$new"); sleep 10
+      [ "$(stat -c %s "$new")" = "$s1" ] && { seen=$new; break; }
+    else
+      sleep 5
+    fi
+  done
+  echo "$1 ${seen:-missing} wait_s=$((SECONDS - t0))" >> "$OUT/nsys/phase_reports.txt"
+  [ -z "$seen" ] || echo "$seen" >> "$OUT/nsys/claimed.txt"
+}
 IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do
   IFS=: read -r kind p1 p2 p3 p4 p5 p6 <<< "$step"
@@ -162,9 +183,12 @@ for step in "${steps[@]}"; do
         --out logprob.jsonl > logprob.log 2>&1 || phase_fail 22 ;;
     decodeprobe)
       curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
+      lim=$(cap 900)
       "${PY[@]}" "$MSL_HARNESS/prof_client.py" decode --url "$URL" --server-log "$OUT/server.log" --tag "${TAG}_b$p1" \
         --steps "$p3" --sessions "$MSL_REPLAY" --start "${MSL_PROBE_START:-200}" --batch "$p1" --prompt-len "$p2" \
-        --out "probe_b$p1.json" > "probe_b$p1.log" 2>&1 || phase_fail 23 ;;
+        --warm-timeout "$(cap 600)" --window-timeout "$(cap 300)" --request-timeout "$lim" \
+        --out "probe_b$p1.json" > "probe_b$p1.log" 2>&1
+      prof_done "$step" $? ;;
     replayprof)
       curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
       "${PY[@]}" "$MSL_HARNESS/replay_client.py" --url "$URL" --sessions "$MSL_REPLAY" --concurrency "$p1" \
@@ -172,11 +196,11 @@ for step in "${steps[@]}"; do
         --summary "replayprof_c$p1.summary.json" > "replayprof_c$p1.log" 2>&1 &
       rp=$!
       "${PY[@]}" "$MSL_HARNESS/prof_client.py" trigger --url "$URL" --server-log "$OUT/server.log" \
-        --tag "${TAG}_rp$p1" --steps "$p6" --delay "$p5" --out "trigger_c$p1.json" > "trigger_c$p1.log" 2>&1
+        --tag "${TAG}_rp$p1" --steps "$p6" --delay "$p5" --window-timeout "$(cap 300)" \
+        --out "trigger_c$p1.json" > "trigger_c$p1.log" 2>&1
       trc=$?
       wait "$rp"; rrc=$?
-      [ "$trc" -eq 0 ] || phase_fail 24
-      [ "$rrc" -eq 0 ] || phase_fail 20 ;;
+      prof_done "$step" "$trc/replay=$rrc" ;;
     *) echo "unknown phase $step"; finish 9 ;;
   esac
   echo "$step end $(wc -l < server.log)" >> phase_lines.txt
