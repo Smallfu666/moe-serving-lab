@@ -3,6 +3,8 @@
 #
 # Usage: run_arm.sh <arm-tag> <model-dir> <expect-gpu: GB200|H200> <phases> <out-dir>
 #   phases: comma list of  replay:<concurrency>:<start>:<count>[:<deadline-s>] | gsm8k | logprob:<start>:<n>
+#           | decodeprobe:<batch>:<prompt-len>:<steps> | replayprof:<concurrency>:<start>:<count>:<deadline-s>:<delay-s>:<steps>
+#   (the two profiler phases need MSL_NSYS_ARGS; see prof_client.py)
 #
 # Exit codes (distinct per cause, so a 0-second failure is never read as a hardware result):
 #    8 cache dir outside MSL_ROOT    9 arch / env leak            10 wrong GPU type or count
@@ -11,6 +13,7 @@
 #   16 expected MoE backend not in log                           17 cache flush refused
 #   18 server not ready within MSL_READY_TIMEOUT_S               19 server process died during a phase
 #   20+ a phase client reported bad requests (20 replay, 21 gsm8k, 22 logprob); see each record's error_kind
+#   23 decodeprobe window failed, 24 replayprof profiler trigger failed (see the phase's JSON for prof_client's rc)
 #   30 stopped at the harness end time (MSL_END_EPOCH): the phase in progress was cut or the next one could not start
 #   31 multi-node rank 0: a peer rank reported a nonzero exit while rank 0 waited for the server to become ready
 #
@@ -19,6 +22,10 @@
 # HTTP and runs the phases; other ranks wait for rank 0's done file. MSL_PEER_RC_GLOB (optional, rank 0) points at
 # the peers' arm_rc.txt files; rank 0 stops waiting for readiness as soon as one of them is nonzero. MSL_LOCAL_GPUS is the GPU count per node
 # (default MSL_TP). MSL_SERVER_ARGS (optional) is appended to the server command and recorded in server_cmd.txt.
+#
+# MSL_GPU_SUBSET (optional): comma list of GPU indices; the server sees only those (CUDA_VISIBLE_DEVICES), the GPU
+# count check is against the list, and the clean check still covers every GPU of the node.
+# MSL_NSYS_ARGS (optional): run the server under `nsys profile $MSL_NSYS_ARGS -o nsys/<tag>` inside the container.
 #
 # MSL_END_EPOCH (optional): epoch seconds by which the launch must stop. A replay phase gets the remaining time minus
 # MSL_END_MARGIN_S as its deadline; a phase that would start with less than MSL_MIN_PHASE_S left is not started.
@@ -46,7 +53,12 @@ want_arch=$([ "$EXPECT" = GB200 ] && echo aarch64 || echo x86_64)
 nvidia-smi -L > gpus.txt
 n=$(grep -c '^GPU ' gpus.txt)
 LOCAL=${MSL_LOCAL_GPUS:-$MSL_TP}
-[ "$n" -eq "$LOCAL" ] && [ "$(grep -c "$EXPECT" gpus.txt)" -eq "$n" ] || { cat gpus.txt; finish 10; }
+if [ -n "${MSL_GPU_SUBSET:-}" ]; then
+  want=$(tr ',' '\n' <<< "$MSL_GPU_SUBSET" | grep -c .)
+  [ "$want" -eq "$LOCAL" ] && [ "$want" -le "$n" ] && [ "$(grep -c "$EXPECT" gpus.txt)" -eq "$n" ] || { cat gpus.txt; finish 10; }
+else
+  [ "$n" -eq "$LOCAL" ] && [ "$(grep -c "$EXPECT" gpus.txt)" -eq "$n" ] || { cat gpus.txt; finish 10; }
+fi
 nvidia-smi topo -m > topo.txt 2>&1
 bash "$MSL_HARNESS/preflight_gpu_clean.sh" gpu_clean.txt || finish 11
 sha256sum "$MSL_REPLAY" | cut -d' ' -f1 > input_sha.txt
@@ -57,6 +69,7 @@ export MSL_LOCAL_GPUS=$LOCAL
 for v in HF_HOME TRITON_CACHE_DIR TORCHINDUCTOR_CACHE_DIR XDG_CACHE_HOME TMPDIR FLASHINFER_WORKSPACE_BASE SGLANG_CACHE_DIR MSL_LOCAL_GPUS; do
   ENVS+=(--env "$v=${!v}")
 done
+[ -n "${MSL_GPU_SUBSET:-}" ] && ENVS+=(--env "CUDA_VISIBLE_DEVICES=$MSL_GPU_SUBSET")
 AX=("${MSL_CONTAINER_BIN:-apptainer}" exec --nv --cleanenv "${ENVS[@]}" --bind "$MSL_ROOT" "$MSL_SIF")
 "${AX[@]}" python3 - > ctx.txt 2>&1 <<'EOF' || finish 14
 import os, site, sys, torch, sglang
@@ -78,6 +91,11 @@ if [ "${MSL_NNODES:-1}" -gt 1 ]; then
 fi
 read -ra EXTRA <<< "${MSL_SERVER_ARGS:-}"
 CMD+=("${EXTRA[@]}")
+if [ -n "${MSL_NSYS_ARGS:-}" ]; then
+  mkdir -p "$OUT/nsys"
+  read -ra NSYS <<< "$MSL_NSYS_ARGS"
+  CMD=(nsys profile "${NSYS[@]}" -o "$OUT/nsys/$TAG" --force-overwrite=true "${CMD[@]}")
+fi
 printf '%q ' "${CMD[@]}" > server_cmd.txt; echo >> server_cmd.txt
 "${AX[@]}" "${CMD[@]}" > server.log 2>&1 &
 SERVER=$!
@@ -115,13 +133,17 @@ wall_stop () { echo "$TAG $1 wall_stop left_s=$(left) $(date -Is)" >> "$OUT/arm_
 phase_fail () { kill -0 "$SERVER" 2>/dev/null || finish 19; finish "$1"; }
 IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do
-  IFS=: read -r kind p1 p2 p3 p4 <<< "$step"
+  IFS=: read -r kind p1 p2 p3 p4 p5 p6 <<< "$step"
   [ "$(left)" -ge "${MSL_MIN_PHASE_S:-60}" ] || wall_stop "$step"
   by_end=0
   if [ "$kind" = replay ] && [ -n "${MSL_END_EPOCH:-}" ]; then
     lim=$(left); by_end=1
     if [ -n "${p4:-}" ] && [ "$p4" -lt "$lim" ]; then lim=$p4; by_end=0; fi
     p4=$lim
+  fi
+  if [ "$kind" = replayprof ]; then
+    lim=$(left)
+    [ "$p4" -lt "$lim" ] || p4=$lim
   fi
   echo "$step start $(wc -l < server.log)" >> phase_lines.txt
   case "$kind" in
@@ -138,6 +160,23 @@ for step in "${steps[@]}"; do
       curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
       "${PY[@]}" "$MSL_HARNESS/logprob_client.py" --url "$URL" --sessions "$MSL_REPLAY" --start "$p1" --n "$p2" \
         --out logprob.jsonl > logprob.log 2>&1 || phase_fail 22 ;;
+    decodeprobe)
+      curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
+      "${PY[@]}" "$MSL_HARNESS/prof_client.py" decode --url "$URL" --server-log "$OUT/server.log" --tag "${TAG}_b$p1" \
+        --steps "$p3" --sessions "$MSL_REPLAY" --start "${MSL_PROBE_START:-200}" --batch "$p1" --prompt-len "$p2" \
+        --out "probe_b$p1.json" > "probe_b$p1.log" 2>&1 || phase_fail 23 ;;
+    replayprof)
+      curl -sf -m 120 -X POST "$URL/flush_cache" > /dev/null || finish 17
+      "${PY[@]}" "$MSL_HARNESS/replay_client.py" --url "$URL" --sessions "$MSL_REPLAY" --concurrency "$p1" \
+        --start "$p2" --count "$p3" --deadline-s "$p4" --out "replayprof_c$p1.jsonl" \
+        --summary "replayprof_c$p1.summary.json" > "replayprof_c$p1.log" 2>&1 &
+      rp=$!
+      "${PY[@]}" "$MSL_HARNESS/prof_client.py" trigger --url "$URL" --server-log "$OUT/server.log" \
+        --tag "${TAG}_rp$p1" --steps "$p6" --delay "$p5" --out "trigger_c$p1.json" > "trigger_c$p1.log" 2>&1
+      trc=$?
+      wait "$rp"; rrc=$?
+      [ "$trc" -eq 0 ] || phase_fail 24
+      [ "$rrc" -eq 0 ] || phase_fail 20 ;;
     *) echo "unknown phase $step"; finish 9 ;;
   esac
   echo "$step end $(wc -l < server.log)" >> phase_lines.txt

@@ -15,6 +15,7 @@ preregistration pins the commit of this folder that was deployed.
 | `replay_client.py` | closed-loop multi-turn replay against `/generate`; per-request TTFT, TPOT, cached tokens | ready, tested against a fake server |
 | `gsm8k_client.py` | GSM8K 5-shot greedy, per-question records for paired flips | ready, tested against a fake server |
 | `logprob_client.py` | teacher-forced top-20 logprobs on recorded answer tokens | ready, tested against a fake server |
+| `prof_client.py` | E4 profiler windows: a steady decode batch, or a timed trigger beside a replay; opens one nsys capture range via `/start_profile` | ready, tested against a fake server |
 | `replay_bounds.py` | the two prefix-hit upper bounds | ready |
 | `tests/` | CPU-only unit tests: `python -m unittest discover -s tests` (client tests need `aiohttp`) | ready |
 
