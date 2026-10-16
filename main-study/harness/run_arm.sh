@@ -14,7 +14,7 @@
 #   18 server not ready within MSL_READY_TIMEOUT_S               19 server process died during a phase
 #   20+ a phase client reported bad requests (20 replay, 21 gsm8k, 22 logprob); see each record's error_kind
 #   Profiler phases never end the arm unless the server died (19): each window's prof_client rc goes to prof_phases.txt
-#   and its report (or "missing") to nsys/phase_reports.txt, after waiting for the report file to stop growing.
+#   and its state (opened | not_opened | json_missing) to nsys/windows.txt; reports are mapped after the server stops.
 #   30 stopped at the harness end time (MSL_END_EPOCH): the phase in progress was cut or the next one could not start
 #   31 multi-node rank 0: a peer rank reported a nonzero exit while rank 0 waited for the server to become ready
 #
@@ -96,12 +96,18 @@ if [ -n "${MSL_NSYS_ARGS:-}" ]; then
   mkdir -p "$OUT/nsys"
   read -ra NSYS <<< "$MSL_NSYS_ARGS"
   CMD=(nsys profile "${NSYS[@]}" -o "$OUT/nsys/$TAG" --force-overwrite=true "${CMD[@]}")
-  : > "$OUT/nsys/claimed.txt"
+  : > "$OUT/nsys/windows.txt"
 fi
 printf '%q ' "${CMD[@]}" > server_cmd.txt; echo >> server_cmd.txt
 "${AX[@]}" "${CMD[@]}" > server.log 2>&1 &
 SERVER=$!
-stop_server () { kill -INT "$SERVER" 2>/dev/null; for _ in $(seq 60); do kill -0 "$SERVER" 2>/dev/null || return; sleep 2; done; kill -9 "$SERVER" 2>/dev/null; }
+stop_server () {
+  local t0=$SECONDS k=0
+  kill -INT "$SERVER" 2>/dev/null
+  for _ in $(seq $(( ${MSL_STOP_WAIT_S:-120} / 2 ))); do kill -0 "$SERVER" 2>/dev/null || break; sleep 2; done
+  if kill -0 "$SERVER" 2>/dev/null; then kill -9 "$SERVER" 2>/dev/null; k=1; fi
+  echo "$TAG server_stop killed=$k stop_s=$((SECONDS - t0)) $(date -Is)" >> "$OUT/arm_status.txt"
+}
 trap stop_server EXIT
 if [ "${MSL_NNODES:-1}" -gt 1 ] && [ "${MSL_NODE_RANK:-0}" != 0 ]; then
   status worker_started 0
@@ -147,28 +153,16 @@ prof_done () {  # <step> <rc> <client-json>
   kill -0 "$SERVER" 2>/dev/null || finish 19
   case "$2" in 5*) curl -s -m 60 -X POST "$URL/stop_profile" > /dev/null ;; esac
   [ -n "${MSL_NSYS_ARGS:-}" ] || return 0
-  # No client JSON means the client died at an unknown point, possibly after /start_profile succeeded, so the
-  # report may still come and must be claimed here, not by the next window.
-  local note=""
+  # nsys writes every capture range's report only when the server exits (J1 556631), so reports are mapped to
+  # windows in capture order after the stop. No client JSON: the client died at an unknown point, maybe after
+  # /start_profile succeeded.
+  local w=not_opened
   if [ "$3" != none ] && [ ! -s "$3" ]; then
-    note=" client_json_missing"
-  elif ! grep -qE '"start_profile_status": *200[,}]' "$3" 2>/dev/null; then
-    echo "$1 missing wait_s=0 no_window_opened" >> "$OUT/nsys/phase_reports.txt"
-    return 0
+    w=json_missing
+  elif grep -qE '"start_profile_status": *200[,}]' "$3" 2>/dev/null; then
+    w=opened
   fi
-  local t0=$SECONDS lim seen="" new s1
-  lim=$(cap 300)
-  while [ $((SECONDS - t0)) -lt "$lim" ]; do
-    new=$(ls -1 "$OUT"/nsys/*.nsys-rep 2>/dev/null | grep -vxF -f "$OUT/nsys/claimed.txt" | head -1)
-    if [ -n "$new" ]; then
-      s1=$(stat -c %s "$new"); sleep 10
-      [ "$(stat -c %s "$new")" = "$s1" ] && { seen=$new; break; }
-    else
-      sleep 5
-    fi
-  done
-  echo "$1 ${seen:-missing} wait_s=$((SECONDS - t0))$note" >> "$OUT/nsys/phase_reports.txt"
-  [ -z "$seen" ] || echo "$seen" >> "$OUT/nsys/claimed.txt"
+  echo "$1 $w" >> "$OUT/nsys/windows.txt"
 }
 IFS=, read -ra steps <<< "$PHASES"
 for step in "${steps[@]}"; do

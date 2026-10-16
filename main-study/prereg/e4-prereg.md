@@ -305,3 +305,37 @@ No cost, energy or ranking statement. Hardware facts used in the write-up cite `
 - The write-up `main-study/results/e4-results.md` quotes the score verbatim and is reviewed by a fresh reviewer.
 - Raw reports stay on the cluster and in the private raw folder; only compact JSON summaries enter the repo, after
   a redaction scan.
+
+## Erratum E4-E1 (2026-10-16, after J1 556631; proposed, needs independent review and an owner ruling)
+
+J1 556631 (marker 0) failed the ladder rule: no window got a report, so `nsys_attrib.py` ran on none. nsys 2026.4.1
+wrote all five reports (`e4-j1-30b.1` … `.5.nsys-rep`) only when the server exited, not when each window closed, so
+every 300 s report wait in §4 ended `missing` (post rc 44). The §4 sentences on the report wait and on measuring
+"the time from the `Stop profiling` line to a stable report" are replaced by:
+
+- **Window record.** Each profiler window is recorded in `nsys/windows.txt` as `opened` (`/start_profile` returned
+  200), `not_opened`, or `json_missing` (no client JSON). There is no report wait.
+- **Mapping.** After the server has stopped, the server log decides which windows opened: a window opened if its
+  server-log range (its `phase_lines.txt` start mark to its end mark, or to the next start mark) holds a
+  `Profiling starts` line with the window's own profile id (`<tag>_b<B>` / `<tag>_rp<c>`; every TP rank logs one,
+  so repeats are expected) and none without it. The k-th opened window maps to `<tag>.k.nsys-rep` (a single opened window may map to an
+  unnumbered `<tag>.nsys-rep`). Every window of the arm is `missing` (G-CAP `INSTRUMENT`) if any of these holds: the
+  number of opened windows differs from the number of reports; a window holds a `Profiling starts` line without its own id;
+  the client state disagrees with the server log (`opened` with none, `not_opened` with one; `json_missing` takes the
+  server log's answer); or the server was killed at stop (`killed=1`), since a killed nsys may leave a truncated
+  report. G-CAP's other clauses (kernel table, TP devices, 64 ± 4 full executions) still apply to each mapped report.
+  They catch a decode window mapped onto the mixed report (150 steps), but not a mixed window mapped onto a decode
+  report or two decode windows swapped; those are prevented only by the checks above.
+- **Server stop.** On nsys arms the server stop waits up to 300 s (`MSL_NSYS_STOP_WAIT_S`) instead of 120 s, and
+  every arm records `server_stop killed=… stop_s=…`.
+- **J1 cold caches.** J1 is submitted with `MSL_ARM_COLD_CACHE=1`, so both J1 arms start with empty JIT/compile
+  caches and the attached ÷ profiler-free ready-time ratio compares like with like. (In 556631 the free arm ran second
+  on the attached arm's warm caches: 241 s vs 116 s.) Whether every JIT cache (e.g. DeepGEMM's) lives under these
+  directories is not established, so the ratio is quoted only if both arms' `Capture target prefill CUDA graph end.
+  elapsed=` values differ by ≤ 25 %; otherwise the ratio is reported as not like-for-like. J2 and J3 keep one cache
+  per job.
+- **J1 submission:** `MSL_ARM_COLD_CACHE=1 bash jobs/submit_e4.sh h200 1 01:00:00 -- H200 "e4-j1-30b|$S|1|||$P4|0|1|0"
+  "e4-j1-30b-free|$S|1|||$PD|0|0|600"` (otherwise unchanged).
+
+Nothing in §5–§9 changes. J1 556631 itself is not scored: its reports were exported on CPU afterwards only for the
+failure analysis (lane `E4_J1_ANALYSIS.md`), which is exploratory and enters no reading.
