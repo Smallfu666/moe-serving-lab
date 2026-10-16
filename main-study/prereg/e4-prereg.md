@@ -1,7 +1,8 @@
 # E4 preregistration — where decode-step time goes (nsys attribution of the E2/E3 results)
 
-Status: **DRAFT** (not frozen). Frozen when an independent reviewer returns GO and the freeze commit is recorded here,
-before any E4 job.
+Status: **FROZEN** 2026-10-16. Criteria as of commit `3f66fea` (independent review: round 1 NO-GO, round 2
+GO-with-fixes, round 3 GO-with-fixes, round 4 GO on `3f66fea`); this status line is the only change in the freeze
+commit, made before any E4 job.
 
 E4 is descriptive attribution. It splits measured GPU time into kernel classes and idle time. Ablations are the only
 evidence for a cause, and E4 runs none, so no class is called the cause of any E2/E3 ratio. One SGLang nightly, one
