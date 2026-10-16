@@ -306,7 +306,12 @@ No cost, energy or ranking statement. Hardware facts used in the write-up cite `
 - Raw reports stay on the cluster and in the private raw folder; only compact JSON summaries enter the repo, after
   a redaction scan.
 
-## Erratum E4-E1 (2026-10-16, after J1 556631; proposed, needs independent review and an owner ruling)
+## Erratum E4-E1 (2026-10-16, after J1 556631; independent review GO on `75b5d4f`; accepted 2026-10-16)
+
+Ruling (option 2): the J1 re-run under this erratum is E4's one instrument re-run (§10), so J2 and J3 have no
+re-run; any rung that fails its gate or VOIDs ends E4 there. J1 556631's reports were exported (exploratory, CPU
+only) before this erratum was written. The erratum changes only capture mechanics (window record, report mapping,
+server stop, J1 cold caches), not the questions, gates or attribution rules of §5–§9.
 
 J1 556631 (marker 0) failed the ladder rule: no window got a report, so `nsys_attrib.py` ran on none. nsys 2026.4.1
 wrote all five reports (`e4-j1-30b.1` … `.5.nsys-rep`) only when the server exited, not when each window closed, so
