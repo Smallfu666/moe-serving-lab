@@ -316,10 +316,11 @@ every 300 s report wait in §4 ended `missing` (post rc 44). The §4 sentences o
 - **Window record.** Each profiler window is recorded in `nsys/windows.txt` as `opened` (`/start_profile` returned
   200), `not_opened`, or `json_missing` (no client JSON). There is no report wait.
 - **Mapping.** After the server has stopped, the server log decides which windows opened: a window opened if its
-  server-log range (its `phase_lines.txt` start mark to its end mark, or to the next start mark) holds exactly one
-  `Profiling starts` line. The k-th opened window maps to `<tag>.k.nsys-rep` (a single opened window may map to an
+  server-log range (its `phase_lines.txt` start mark to its end mark, or to the next start mark) holds a
+  `Profiling starts` line with the window's own profile id (`<tag>_b<B>` / `<tag>_rp<c>`; every TP rank logs one,
+  so repeats are expected) and none without it. The k-th opened window maps to `<tag>.k.nsys-rep` (a single opened window may map to an
   unnumbered `<tag>.nsys-rep`). Every window of the arm is `missing` (G-CAP `INSTRUMENT`) if any of these holds: the
-  number of opened windows differs from the number of reports; a window holds more than one `Profiling starts` line;
+  number of opened windows differs from the number of reports; a window holds a `Profiling starts` line without its own id;
   the client state disagrees with the server log (`opened` with none, `not_opened` with one; `json_missing` takes the
   server log's answer); or the server was killed at stop (`killed=1`), since a killed nsys may leave a truncated
   report. G-CAP's other clauses (kernel table, TP devices, 64 ± 4 full executions) still apply to each mapped report.
