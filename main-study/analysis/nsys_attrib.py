@@ -51,7 +51,7 @@ def classify(name):
 
 def base_name(name):
     out, depth = [], 0
-    for ch in name:
+    for ch in name.replace("(anonymous namespace)", "anonymous_namespace"):
         if ch == "<":
             depth += 1
         elif ch == ">":

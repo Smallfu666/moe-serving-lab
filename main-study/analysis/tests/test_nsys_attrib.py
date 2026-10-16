@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from nsys_attrib import analyse, classify  # noqa: E402
+from nsys_attrib import analyse, base_name, classify  # noqa: E402
 
 NAMES = {1: "fused_moe_kernel", 2: "ncclDevKernel_AllReduce_Sum_bf16_RING_LL", 3: "flash_fwd_splitkv_kernel",
          4: "nvjet_tst_64x8_64x16_4x1_v_bz_TNT", 5: "rmsnorm_kernel", 6: "top_k_top_p_sampling", 7: "void mystery_kernel<int>"}
@@ -65,6 +65,11 @@ class Attrib(unittest.TestCase):
                          "dense_gemm")
         self.assertEqual(classify("void flashinfer::trtllm_allreduce_fusion::allreduce_fusion_kernel_oneshot_lamport"
                                   "<bf16>"), "comm")
+        ln = "void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<float, float>(int, float)"
+        sm = "void at::native::(anonymous namespace)::cunn_SoftMaxForward<4, float>(float*, int)"
+        self.assertEqual(base_name(ln), "void at::native::anonymous_namespace::vectorized_layer_norm_kernel")
+        self.assertNotEqual(base_name(ln), base_name(sm))
+        self.assertEqual(classify(ln), "other_known")
 
     def test_decode_window(self):
         per_dev = {0: [], 1: []}

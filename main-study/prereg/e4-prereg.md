@@ -94,7 +94,8 @@ timeout min(300 s, left), request timeout min(900 s, left); report wait min(300 
 (`min-left-s`, compared with end time − 120 s margin, the same basis as the harness's phase gate); a profiler
 window's `/flush_cache` is retried for ≤ min(120 s, left) and the window is skipped (not the arm) if it never
 succeeds; a window whose client gave up before `Stop profiling` gets `POST /stop_profile`; no report wait for a window
-that never sent `/start_profile`; server stop ≤ 120 s; background exports run until end time + 420 s, then the marker is written and
+whose `/start_profile` did not return 200; if the client wrote no JSON, the report wait still runs and the window is
+marked `client_json_missing`; server stop ≤ 120 s; background exports run until end time + 420 s, then the marker is written and
 unfinished exports are redone on CPU afterwards; Slurm wall 60 min. The server's scheduler watchdog (300 s) is far
 above a 64-step window. Whether `cudaProfilerStop` blocks while nsys writes a report is unknown; J1 measures the time
 from the `Stop profiling` line to a stable report.
@@ -139,7 +140,7 @@ Fused all-reduce + RMSNorm kernels count as `comm`. The Triton `fused_moe_kernel
 activation-quantize prologue, and this is not separated out.
 
 **G-CLASS (classifier gap).** Kernel names are grouped by base name (template arguments and parameter lists
-stripped). `nsys_attrib.py` lists every base name with ≥ 3 % of a window's kernel sum, in **any** class, with its
+stripped; `(anonymous namespace)` is kept as part of the name). `nsys_attrib.py` lists every base name with ≥ 3 % of a window's kernel sum, in **any** class, with its
 class (`kernels_ge_3pct`), and sets `gate_class_other` false if one of them is in `other`. A false gate, or a listed
 kernel the scorer judges misfiled, makes the configuration's tables show that kernel on its own row, flagged
 `CLASSIFIER-GAP`; it is not reassigned. Changing the regex needs a dated erratum with independent review; both
@@ -188,7 +189,7 @@ transfer. That limit is part of the claim.
 |---|---|---|---|
 | G-CAP (instrument) | every window, H200 and GB200 | report exists; kernel table present; kernels on exactly TP devices; decode windows: full executions within 64 ± 4 on every device | window `INSTRUMENT`; a gate arm (J2 30B) failing stops the job (exit 40) |
 | G-BATCH | decode windows, both | probe rc 0 (all B requests streamed through the stop, none finished, no errors); the last TP0 `Decode batch` line before `Stop profiling` shows `#running-req: B` **and** `cuda graph: True`; no `Prefill batch` line between `Profiling starts` and `Stop profiling` | `NOT_STEADY` (excluded); a window whose decode lines show `cuda graph: False` is `NO_GRAPH` (a real software state, excluded, reported) |
-| G-DISTORT | decode windows, both | (a) profiled median step time ÷ **nsys-attached step time outside the capture range** (B ÷ `gen throughput` of the last `Decode batch` line with `#running-req: B` before `Profiling starts`) ≤ 1.15; (b) on the 30B model, the same ratio against the **profiler-free** arm's step time at the same B (B ÷ `gen throughput` of that arm's last `#running-req: B` line before `Profiling starts`) ≤ 1.15; also reported, not gated: the log-based attached ÷ log-based free ratio (one instrument on both sides) (J1 for H200; J2's free arm for GB200, if it ran) | absolute µs from that window not quoted; shares quoted, labelled `profiler-distorted`. (b) is measured on 30B only and is transferred to 235B as an assumption, stated as such |
+| G-DISTORT | decode windows, both | (a) profiled median step time ÷ **nsys-attached step time outside the capture range** (B ÷ `gen throughput` of the last `Decode batch` line with `#running-req: B` before `Profiling starts`) ≤ 1.15; (b) on the 30B model, the same ratio against the **profiler-free** arm's step time at the same B (B ÷ `gen throughput` of that arm's last `#running-req: B` line before `Profiling starts`) ≤ 1.15; also reported, not gated: the log-based attached ÷ log-based free ratio (one instrument on both sides). (b) is computed for each 30B pair in one job at one TP: J1 (TP1) and J3 (TP2, if its free arm ran) on H200, J2 (TP2, if its free arm ran) on GB200; the value transferred to 235B on a platform is the largest ratio available on that platform | absolute µs from that window not quoted; shares quoted, labelled `profiler-distorted`. (b) is measured on 30B only and is transferred to 235B as an assumption, stated as such |
 | G-BACKEND | GB200: exit 16 (existing). Both platforms: `moe_gemm` time > 0 in every valid decode window | MoE kernels classified | `CLASSIFIER-GAP` for that configuration |
 | G-CLASS | every window, both | `gate_class_other` true and no listed ≥ 3 % kernel judged misfiled | `CLASSIFIER-GAP` flag (§5.2) |
 

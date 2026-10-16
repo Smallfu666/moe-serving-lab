@@ -147,7 +147,12 @@ prof_done () {  # <step> <rc> <client-json>
   kill -0 "$SERVER" 2>/dev/null || finish 19
   case "$2" in 5*) curl -s -m 60 -X POST "$URL/stop_profile" > /dev/null ;; esac
   [ -n "${MSL_NSYS_ARGS:-}" ] || return 0
-  if ! grep -q t_profile_req "$3" 2>/dev/null; then
+  # No client JSON means the client died at an unknown point, possibly after /start_profile succeeded, so the
+  # report may still come and must be claimed here, not by the next window.
+  local note=""
+  if [ "$3" != none ] && [ ! -s "$3" ]; then
+    note=" client_json_missing"
+  elif ! grep -qE '"start_profile_status": *200[,}]' "$3" 2>/dev/null; then
     echo "$1 missing wait_s=0 no_window_opened" >> "$OUT/nsys/phase_reports.txt"
     return 0
   fi
@@ -162,7 +167,7 @@ prof_done () {  # <step> <rc> <client-json>
       sleep 5
     fi
   done
-  echo "$1 ${seen:-missing} wait_s=$((SECONDS - t0))" >> "$OUT/nsys/phase_reports.txt"
+  echo "$1 ${seen:-missing} wait_s=$((SECONDS - t0))$note" >> "$OUT/nsys/phase_reports.txt"
   [ -z "$seen" ] || echo "$seen" >> "$OUT/nsys/claimed.txt"
 }
 IFS=, read -ra steps <<< "$PHASES"
