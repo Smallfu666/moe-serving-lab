@@ -91,9 +91,9 @@ def fig_e3():
     }
     # e3-results.md:24, :25, :28
     ratios = {
-        "N4-FP8 / G2-FP8 (4 vs 2 GPUs)": [0.8503, 0.7974, 0.7078],
-        "N4-NV4 / G2-NV4 (4 vs 2 GPUs)": [0.7953, 0.8681, 0.7976],
-        "R16-FP8 / N4-FP8 (16 vs 4 GPUs)": [0.02028, 0.02781, None],
+        "N4-FP8 (TP4+EP4) / G2-FP8 (TP2)": [0.8503, 0.7974, 0.7078],
+        "N4-NV4 (TP4+EP4) / G2-NV4 (TP2)": [0.7953, 0.8681, 0.7976],
+        "R16-FP8 (4 nodes) / N4-FP8 (1 node)": [0.02028, 0.02781, None],
     }
     fig, (left, right) = plt.subplots(1, 2, figsize=(10, 4.2))
     for color, (label, pts) in zip(SERIES, frontiers.items()):
@@ -102,7 +102,7 @@ def fig_e3():
     left.set_yscale("log")
     left.set_xlabel("interactivity (tok/s/user)")
     left.set_ylabel("output throughput (tok/s/GPU, log)")
-    left.set_title("GB200 FP8 frontiers: 2, 4 and 16 GPUs", loc="left", color=INK)
+    left.set_title("GB200 FP8 frontiers: G2, N4, R16", loc="left", color=INK)
     left.legend(frameon=False, fontsize=7)
     left.grid(True, axis="x", color=GRID, linewidth=0.6)
 
@@ -151,7 +151,8 @@ def fig_e4():
         ax.set_xticklabels(classes, rotation=35, ha="right")
         ax.set_ylim(-0.6, 0.75)
         ax.set_ylabel("share of per-token GPU-time difference")
-        ax.set_title(f"E4 Q1 {pair}: no single dominant class", loc="left", color=INK)
+        flag = " (CLASSIFIER-GAP flag)" if pair.startswith("G2-FP8") else ""
+        ax.set_title(f"E4 Q1 {pair}: no single dominant class{flag}", loc="left", color=INK, fontsize=9)
         ax.legend(frameon=False, fontsize=7, loc="upper left")
 
     # e4-results.md:161-163 (Q3, R16 vs N4 at c = 1–16, observational CPU log counts)

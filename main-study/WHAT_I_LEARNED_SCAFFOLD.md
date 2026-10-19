@@ -7,11 +7,10 @@ write down what you would need to measure.
 1. On 2 × H200 at c = 32, the KV pool is 0.16 of the working set. Walk through what the server does when a new turn
    arrives and its prefix has been evicted. Why does that show up mostly in TTFT, and why is it not a statement about
    GPU speed?
-2. Why does throughput per GPU fall when H200 goes from TP4 to TP8 + EP8 here? What does E4's "partial" F-COMM
-   verdict let you say, and what would you need before naming a cause?
-3. In E4, `other_known` on H200 is mostly the activation kernel and the FP8 activation-quantization kernel. Why might
-   these small elementwise kernels carry a large share of per-token time at small decode batches? What GB200 kernel
-   sits in a different class, and why does that matter for the comparison?
+2. What do the results let you say about why throughput per GPU falls when H200 goes from TP4 to TP8 + EP8, and
+   what does E4's "partial" F-COMM verdict rule out? What would you need before naming a cause?
+3. In E4, which kernels make up most of `other_known` on H200 at each B, and what would you need to measure to
+   explain their share? What GB200 kernel sits in a different class, and why does that matter for the comparison?
 4. The overlap term in E4 is about as large as the biggest class share. What does "sum basis" mean, why can the class
    shares add up to more than 1, and how would a union-basis view change the story?
 5. F-BRIDGE fires for GB200 NVFP4 vs H200 TP4 at 100 tok/s/user. What does it mean that decode steps alone do not
