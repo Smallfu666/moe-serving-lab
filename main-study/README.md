@@ -1,7 +1,10 @@
 # Main study: same MoE, same agentic workload — H200 FP8 vs GB200 FP8 vs GB200 NVFP4
 
-> **Status: not started.** No GPU job has run. This folder holds the scaffolding and a draft preregistration
-> template. Results will appear only after the preregistration is frozen and the runs are independently scored.
+> **Status: done.** E1–E4 ran on 2026-10-15/16 and each was independently scored and reviewed. Start with
+> [`SUMMARY.md`](SUMMARY.md); the scored results are in [`results/`](results/), the figures in [`figures/`](figures/)
+> and a 2-minute talk in [`TALK_2MIN.md`](TALK_2MIN.md). The sections below are the original E1 plan; E2 (per-GPU
+> throughput at matched interactivity), E3 (GB200 scaling) and E4 (nsys attribution) extended it, as each
+> `results/eN-results.md` describes.
 
 ## Question
 
@@ -33,7 +36,8 @@ between, so the model has to fit in 2 × 185 GiB.
 
 | Folder | Contents |
 |---|---|
-| [`prereg/`](prereg/) | the E1 preregistration (`e1-prereg.md`) |
+| [`prereg/`](prereg/) | the frozen preregistrations (`e1`–`e4-prereg.md`) |
+| [`figures/`](figures/) | figures for the summary, drawn by `make_figures.py` from the results files |
 | [`harness/`](harness/) | replay client, launch wrapper, pre-flight checks; environment variables and placeholders only |
 | [`results/`](results/) | small summary tables, quoted from the independent score; no raw logs |
 | [`analysis/`](analysis/) | scripts that turn the scored results into the tables and plots of the write-up |
