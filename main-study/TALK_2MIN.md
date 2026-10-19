@@ -7,7 +7,7 @@ Spoken numbers are rounded; the exact values are in [SUMMARY.md](SUMMARY.md) and
 I served one large mixture-of-experts model, Qwen3 235B, with SGLang on H200 and on GB200.
 The workload replays real coding-agent sessions; at low load the prefix-cache hit rate is about 95 percent.
 I froze the predictions before each run, and someone else scored the raw data.
-Most first-round predictions confirmed directions I had seen in pilot runs.
+Most predictions in the first experiment confirmed directions I had already seen in pilot runs.
 
 First, on the same two GPUs at low load, GB200 FP8 decodes faster than H200 FP8: 7.9 against 9.9 milliseconds per token.
 NVFP4 on GB200 is faster again, 6.6 milliseconds, but not lossless.

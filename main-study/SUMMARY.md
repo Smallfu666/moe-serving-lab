@@ -3,7 +3,8 @@
 **Question.** One MoE model, one agentic multi-turn workload, one SGLang commit: how do GB200 FP8, GB200 NVFP4 and
 H200 FP8 differ in latency, throughput per GPU and prefix-cache reuse, and where does decode-step GPU time go?
 Results: [E1](results/e1-results.md), [E2](results/e2-results.md), [E3](results/e3-results.md),
-[E4](results/e4-results.md), each frozen before running and independently scored.
+[E4](results/e4-results.md), each preregistered and independently scored (E1's P1–P4 confirmed
+directions seen in pilot runs; only P5 was blind).
 
 **Setup.**
 - Model: Qwen3-235B-A22B-Instruct-2507, public FP8 and NVFP4 checkpoints (quantized by different parties), bf16 KV cache.
