@@ -201,7 +201,7 @@ each record each gate reads is produced on H200, and the J2 gate arm shows the s
 
 **Ladder rule.** J1 passes when its five windows pass G-CAP, at least three of its four decode windows pass G-BATCH,
 `nsys_attrib.py` runs on every report, and the free arm logs a `Decode batch` line at each B. Otherwise there is a
-written analysis, then the one re-run (an instrument VOID) or a stop (a design defect, owner ruling). The gate arms of
+written analysis, then the one re-run (an instrument VOID) or a stop (a design defect, author ruling). The gate arms of
 J2 and J3 must pass G-CAP on 2 devices, or the job stops (exit 40) before any 235B arm.
 
 **Stop rules.** A gate failure in a frozen design stops the job; it is not rescued. An instrument VOID gets one re-run
@@ -282,10 +282,10 @@ E4 does not cover:
 
 No cost, energy or ranking statement. Hardware facts used in the write-up cite `HARDWARE_INVENTORY.md` rows.
 
-## 10. Budget (owner 2026-10-16)
+## 10. Budget (2026-10-16)
 
-- **Billing.** Only the project whose wallet name contains 「測試計畫」, balance 1,401.4171 SU at planning. Its ID is
-  resolved at submit time and never written down.
+- **Billing.** One designated allocation, about 1,400 SU at planning. Its ID is resolved at submit time and never
+  written down.
 - **Rates.** Every E4 decision uses the worst case, H200 60 SU/GPU-h and GB200 100 SU/GPU-h, whole hours per job
   (the wallet display can stay flat for hours and then drop, `serving-benchmark-study` lesson 14). Every job is
   capped at 1 h of wall (`--time 01:00:00`; harness end time 50 min).

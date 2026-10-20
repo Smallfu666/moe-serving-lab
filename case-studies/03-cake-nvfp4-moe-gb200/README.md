@@ -1,6 +1,6 @@
 # Case 03: an NVFP4 MoE decode kernel, end to end on GB200
 
-> Private draft. Every claim here is limited to what the public report
+> Every claim here is limited to what the public report
 > <https://github.com/sgl-project/sglang/issues/43258> already states; this page adds no claim beyond it. Numbers are
 > quoted from the independent score of the run (the issue rounds some of them).
 
@@ -102,10 +102,6 @@ python -m sglang.bench_serving --backend sglang --dataset-name random --dataset-
 ```
 
 The full harness (interleaving, clean-GPU check, profiler windows) is in private notes and not published here.
-
-## 給作者的備註（zh-TW）
-
-這篇的上限就是已公開的 issue 43258，repo 版不比 issue 多講任何主張。可以講的：開 Cake 之後 TPOT 在 c=1/8/32 都變慢，而且遠大於啟動間的雜訊；trace 證明 Cake kernel 真的有跑。不能講的：變慢的原因（glue 只是「可能」）、Cake kernel 本身快或慢（無法判定）、準確度有退步（只是不確定的訊號）。prereg 的預測區間和另外兩個臂不在 issue 裡，所以這裡也不放。「What I learned」請用你自己的話寫。
 
 ---
 

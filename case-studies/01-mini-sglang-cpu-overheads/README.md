@@ -1,6 +1,6 @@
 # Case 01: CPU-side serving overheads on a small engine
 
-> Private draft. Measured on mini-sglang (<https://github.com/sgl-project/mini-sglang>, MIT), a compact teaching
+> Measured on mini-sglang (<https://github.com/sgl-project/mini-sglang>, MIT), a compact teaching
 > implementation of an SGLang-style server. **mini-sglang is not SGLang**, and a 0.6B model on one workstation GPU is
 > not a production setting. Numbers are quoted from the independent scores of the runs.
 
@@ -115,10 +115,6 @@ Where to read in mini-sglang at `9a91cfaf`:
   `num_tokenizer = 0` means one shared tokenizer/detokenizer process.
 
 The measurement harness (load clients, NVTX probes, stage timestamps) is in private notes and not published here.
-
-## 給作者的備註（zh-TW）
-
-這篇可以講得最完整：mini-sglang 是 MIT，沒有牽涉上游 bug，三個實驗都有預先登記和獨立計分。一定要照實講的兩件事：E1 吞吐只差 5 %，在預測區間內但低於 15 % 的點預測；tokenizer 實驗的次要預測（只拆 detokenizer 影響不大）被否證了。分段表是未登記的觀察，只能當描述，不能當結論。「What I learned」請用你自己的話寫。
 
 ---
 

@@ -3,8 +3,8 @@
 Serving one large MoE model on Hopper and Grace-Blackwell under an agentic multi-turn workload:
 measurement, attribution, correctness.
 
-> Status: private draft. The main study has not started. Three case studies are drafted from earlier, independently
-> scored runs; a fourth is a private draft pending the author's decision.
+> Status: work in progress. Three case studies are written up from earlier, independently scored runs; the main study
+> is in progress.
 
 ## 1. Summary
 
@@ -27,7 +27,6 @@ See [`main-study/`](main-study/).
 | # | Topic | Hardware | Evidence | Link |
 |---|---|---|---|---|
 | 01 | On a small engine, overlap scheduling hides almost all scheduler CPU time yet gains only 5 % throughput; splitting tokenize/detokenize work across processes cut burst TTFT p50 from 263 to 117 ms | 1 × RTX A4500 | preregistered, independently scored; one secondary prediction falsified | [01](case-studies/01-mini-sglang-cpu-overheads/) |
-| 02 | A Hopper CuTe-DSL MoE kernel wired into SGLang: faster prefill with CUDA graphs on a FlashInfer version SGLang did not pin, slower decode at c = 1 and without graphs, no usable verdict on the pinned version | 1 and 4 × H200 | preregistered, independently scored; **private draft, author decision pending** | [02](case-studies/02-cutedsl-moe-e2e/) |
 | 03 | An NVFP4 MoE decode kernel reported faster alone makes end-to-end TPOT 17.6–38.1 % slower | 1 × GB200 | preregistered, independently scored; public report | [03](case-studies/03-cake-nvfp4-moe-gb200/) |
 | 04 | TensorRT-LLM's KV estimation probe ignores the host-memory budget and can be OOM-killed in a 16 GiB container | 1 × H200 | preregistered, independently scored; public report | [04](case-studies/04-trtllm-kv-probe-host-oom/) |
 
@@ -56,18 +55,16 @@ Software, models and data used or referenced. Nothing below is redistributed in 
 
 | Item | Used in | License |
 |---|---|---|
-| [SGLang](https://github.com/sgl-project/sglang) | main study, 02, 03 | see repository |
+| [SGLang](https://github.com/sgl-project/sglang) | main study, 03 | see repository |
 | [mini-sglang](https://github.com/sgl-project/mini-sglang) | 01 | MIT |
-| [FlashInfer](https://github.com/flashinfer-ai/flashinfer) | 02, 03 | see repository |
+| [FlashInfer](https://github.com/flashinfer-ai/flashinfer) | 03 | see repository |
 | [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) | 04 | see repository |
 | [Qwen/Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) | 01 | Apache-2.0 |
-| [Qwen/Qwen3-30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B) | 02 | Apache-2.0 |
 | [nvidia/Qwen3-30B-A3B-NVFP4](https://huggingface.co/nvidia/Qwen3-30B-A3B-NVFP4) | 03 | Apache-2.0 |
-| [Qwen/Qwen3-235B-A22B](https://huggingface.co/Qwen/Qwen3-235B-A22B) | 02 | see model card |
 | [Qwen/Qwen3-235B-A22B-Instruct-2507-FP8](https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507-FP8) | main study (planned) | Apache-2.0 |
 | [nvidia/Qwen3-235B-A22B-Instruct-2507-NVFP4](https://huggingface.co/nvidia/Qwen3-235B-A22B-Instruct-2507-NVFP4) | main study (planned) | see model card |
 | [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) | 04 | see model card |
-| [GSM8K](https://huggingface.co/datasets/openai/gsm8k) | 02, 03, main study | MIT |
+| [GSM8K](https://huggingface.co/datasets/openai/gsm8k) | 03, main study | MIT |
 | [nebius/SWE-rebench-openhands-trajectories](https://huggingface.co/datasets/nebius/SWE-rebench-openhands-trajectories) | main study (planned) | CC-BY-4.0; attribution to be completed when the data is used |
 
 ## 9. Notes on how this was made

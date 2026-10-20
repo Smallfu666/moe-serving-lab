@@ -21,7 +21,7 @@ or ranking claim.
 | 30B reference | 1 × H200 (TP1), 2 × H200 (TP2), 2 × GB200 (TP2) | — | Qwen3-30B-A3B-FP8, with a profiler-free twin arm |
 
 Hardware facts (H200 sm_90 x86 nodes, GB200 sm_100 aarch64 nodes, one Slurm cluster): [`../../docs/hardware.md`](../../docs/hardware.md),
-from the owner's private hardware inventory (H200 and GB200 rows of that cluster).
+from the author's hardware inventory (H200 and GB200 rows of that cluster).
 
 ## Instrument outcome
 

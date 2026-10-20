@@ -1,6 +1,6 @@
 # Case 04: a KV-cache estimation probe that ignores the host-memory budget
 
-> Private draft. The scope of this page is capped by the public report
+> The scope of this page is capped by the public report
 > <https://github.com/NVIDIA/TensorRT-LLM/issues/20211>; nothing here goes beyond it. Numbers are quoted from the
 > independent scores of the runs. No fix is claimed or included.
 
@@ -104,10 +104,6 @@ TRTLLM_SKIP_KV_CACHE_ESTIMATION=1 trtllm-serve serve ...   # same arguments
 ```
 
 Whether the default arm is killed depends on node free memory at probe time (see R3, R4).
-
-## 給作者的備註（zh-TW）
-
-這篇的上限是已公開的 issue 20211 的正文，repo 版不多講任何主張。重點是一條因果鏈：估算階段刻意丟掉 `host_cache_size` → 探測改用自動 tier → 自動 tier 看的是整台節點的空閒記憶體，不是 cgroup → 節點空閒多時 tier 太大，在 16 GiB cgroup 裡被 OOM 殺掉。R3 是反例（節點空閒少、tier 小、沒死），所以「6/6」只對 R1 那次的節點狀態成立。「What I learned」請用你自己的話寫。
 
 ---
 
