@@ -180,6 +180,73 @@ ratios. The scorer did not re-check the source anchors.
 - E2 bridging holds only for G2-FP8/H4 at 75 and 100 tok/s/user and H8/H4 at 75.
 - G2-FP8 tables carry the `CLASSIFIER-GAP` activation row.
 
+## Post-hoc, not scored: the same times per GPU per decode step
+
+Added 2026-10-21 on CPU, after the score; it changes no verdict. [`../analysis/e4_per_gpu_step.py`](../analysis/e4_per_gpu_step.py)
+multiplies the per-token table above by B ÷ GPUs, giving µs that one device spends in each class during one decode
+step (device means, sum basis; same data, different denominator; output in
+[`../analysis/derived/e4_per_gpu_step.md`](../analysis/derived/e4_per_gpu_step.md)).
+
+| Config | B | step µs | comm | moe_gemm | moe_other | other_known | attention | dense_gemm | other | idle | overlap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| G2-FP8 | 4 | 10529.2 | 986.0 | 4926.2 | 1677.8 | 843.2 | 1527.8 | 2111.2 | 50.0 | 139.4 | -1732.4 |
+| G2-FP8 | 8 | 12870.7 | 1050.4 | 6676.8 | 1829.6 | 875.6 | 2076.0 | 2105.2 | 51.2 | 123.6 | -1918.0 |
+| G2-FP8 | 16 | 16284.1 | 1085.6 | 8833.6 | 2032.0 | 914.4 | 3180.8 | 2141.6 | 55.2 | 112.8 | -2072.8 |
+| G2-NV4 | 4 | 7980.5 | 997.6 | 2718.2 | 753.0 | 773.4 | 1555.4 | 2004.2 | 50.8 | 107.8 | -980.0 |
+| G2-NV4 | 8 | 9552.1 | 1041.6 | 3752.0 | 811.2 | 780.4 | 2077.6 | 2033.6 | 54.4 | 90.4 | -1089.2 |
+| G2-NV4 | 16 | 11687.3 | 1056.8 | 4679.2 | 891.2 | 783.2 | 3182.4 | 2078.4 | 59.2 | 88.8 | -1131.2 |
+| H4-FP8 | 4 | 11247.1 | 1313.8 | 4138.4 | 1109.7 | 3914.6 | 1716.0 | 2108.7 | 249.0 | 454.9 | -3758.1 |
+| H4-FP8 | 8 | 14172.3 | 1462.4 | 6388.6 | 963.2 | 3818.2 | 2300.4 | 1941.8 | 257.2 | 413.6 | -3373.4 |
+| H4-FP8 | 16 | 16573.2 | 1527.6 | 7406.8 | 936.0 | 5822.0 | 3334.0 | 1956.8 | 272.0 | 541.6 | -5223.6 |
+| H8-FP8 | 4 | 11462.2 | 2102.7 | 3321.5 | 1655.6 | 4079.2 | 1693.2 | 1755.8 | 496.4 | 599.5 | -4241.7 |
+| H8-FP8 | 8 | 12927.6 | 2478.2 | 3805.9 | 1805.9 | 4680.4 | 2296.5 | 1694.2 | 532.8 | 592.8 | -4959.1 |
+| H8-FP8 | 16 | 15567.4 | 3233.4 | 4551.6 | 1916.0 | 5554.4 | 3344.0 | 1693.2 | 563.6 | 583.6 | -5872.4 |
+
+H8-FP8 (TP8 + EP8) ÷ H4-FP8 (TP4), per GPU per step; 1.00 = unchanged, 0.50 = halved by twice the GPUs:
+
+| B | step | comm | moe_gemm | moe_other | other_known | attention | dense_gemm | other | idle | overlap |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 4 | 1.02 | 1.60 | 0.80 | 1.49 | 1.04 | 0.99 | 0.83 | 1.99 | 1.32 | 1.13 |
+| 8 | 0.91 | 1.69 | 0.60 | 1.87 | 1.23 | 1.00 | 0.87 | 2.07 | 1.43 | 1.47 |
+| 16 | 0.94 | 2.12 | 0.61 | 2.05 | 0.95 | 1.00 | 0.87 | 2.07 | 1.08 | 1.12 |
+
+Description: at the same B, an H8 decode step takes 0.91–1.02× as long as an H4 step on twice the GPUs, so each H8 GPU
+produces about half as many tokens per second. Per GPU, attention (0.99–1.00) and other_known (0.95–1.23) do not
+shrink, moe_gemm shrinks to 0.60–0.80 and dense_gemm to 0.83–0.87, and comm (1.60–2.12) and moe_other (1.49–2.05) grow.
+
+**One reading for attention, labelled as inference.**
+
+- *Fact, model config.* Qwen3-235B-A22B has 64 query heads and 4 KV heads (`num_attention_heads: 64`,
+  `num_key_value_heads: 4`, `head_dim: 128`, 94 layers; HF `config.json` of the FP8 checkpoint at `e156cb4e`).
+- *Fact, server logs (raw, not in this repository).* The `KV Cache is allocated` line of the E4 launches (job 557426) gives 24,064 bytes of K per
+  token per GPU on both H4 (34.12 GB for 1,522,305 tokens) and H8 (47.67 GB for 2,126,914 tokens; SGLang prints GiB
+  as "GB"). That is 94 × 128 × 2 bytes,
+  i.e. one KV head per GPU in both: with TP8 each of the 4 KV heads is held by two GPUs (per-configuration values in
+  [`../README.md`](../README.md#configurations-and-server-flags)).
+- *Inference, not measured.* A decode step's attention on one GPU reads that GPU's KV head for every cached token of
+  every request in the batch. With one KV head per GPU in both settings, TP8 reads the same KV bytes per GPU per step
+  as TP4 at the same B and context, and only the query heads per GPU halve (16 → 8). If decode attention here is bound
+  by those KV reads, its per-GPU time stays flat, as the table shows. No KV-read byte count (DRAM counters) was
+  collected, so this is consistent with the data, not shown by it.
+- *What it does not cover.* Attention is 15–21 % of an H8 step (1693 of 11462 µs at B = 4, 3344 of 15567 µs at
+  B = 16). The flat other_known, the larger comm and moe_other, and the larger −overlap term are not explained by KV
+  heads.
+
+**Alternative or additional explanations, none tested:**
+
+- *Sum basis counts waiting as work.* The −overlap term per GPU per step (−4242 to −5872 µs on H8) is as large as the
+  largest class. A short kernel launched early (for example with programmatic dependent launch) can be "running" while
+  it waits for its predecessor, so flat class times may be partly waiting. Exclusive-time attribution would separate
+  this; it needs the `.nsys-rep`/sqlite exports, which are not in this repository.
+- *Latency-bound kernels* (our addition, not from the review). At 4–16 decode tokens per step, attention and the
+  small elementwise kernels may be bound by launch and memory latency rather than bytes, which would also keep their
+  time flat when work per GPU halves, with or without KV replication.
+- *other_known under EP8.* With EP8 each GPU applies the activation and FP8 activation quantization only to the tokens
+  routed to its 16 experts, which halves the work per GPU against TP4 in an ideal split; the time does not halve. The
+  summaries carry no kernel shapes, so whether these kernels run on padded buffers is not known.
+- *A test that separates these* (GPU, not run): H8 with attention-DP8 + EP8 instead of TP8 + EP8. Each rank would hold
+  all 4 KV heads for only its own requests, which changes KV bytes per GPU without changing the MoE layout.
+
 ## What I learned
 
 _To be written by the author._
