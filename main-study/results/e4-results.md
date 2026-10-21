@@ -218,7 +218,7 @@ shrink, moe_gemm shrinks to 0.60–0.80 and dense_gemm to 0.83–0.87, and comm 
 
 - *Fact, model config.* Qwen3-235B-A22B has 64 query heads and 4 KV heads (`num_attention_heads: 64`,
   `num_key_value_heads: 4`, `head_dim: 128`, 94 layers; HF `config.json` of the FP8 checkpoint at `e156cb4e`).
-- *Fact, server logs.* The `KV Cache is allocated` line of the E4 launches (job 557426) gives 24,064 bytes of K per
+- *Fact, server logs (raw, not in this repository).* The `KV Cache is allocated` line of the E4 launches (job 557426) gives 24,064 bytes of K per
   token per GPU on both H4 (34.12 GB for 1,522,305 tokens) and H8 (47.67 GB for 2,126,914 tokens; SGLang prints GiB
   as "GB"). That is 94 × 128 × 2 bytes,
   i.e. one KV head per GPU in both: with TP8 each of the 4 KV heads is held by two GPUs (per-configuration values in

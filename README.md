@@ -17,7 +17,7 @@ _To be written by the author after the main study: the question, the hardware, o
   each platform at its own configuration in E2–E4 (2 × GB200 TP2, 4 × H200 TP4, 8 × H200 TP8 + EP8, 4 and 16 × GB200).
 - Workload: replay of public agent trajectories with multi-turn prefix reuse.
 - Metrics: TTFT / TPOT / throughput at fixed concurrency, prefix-cache hit rate.
-- Results: E1–E4, each preregistered and independently scored: [`main-study/results/`](main-study/results/), one-page
+- Results: E1–E4, preregistered (except E4 Q3) and independently scored: [`main-study/results/`](main-study/results/), one-page
   overview in [`main-study/SUMMARY.md`](main-study/SUMMARY.md). Post-hoc CPU analyses of the same logs (not scored):
   [`main-study/results/posthoc-log-analyses.md`](main-study/results/posthoc-log-analyses.md).
 - Attribution: where the time goes (nsys), and which kernels actually ran. Descriptive, not causal.
