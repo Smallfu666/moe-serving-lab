@@ -101,7 +101,7 @@ def fig_e2_h100_appendix():
 
 def fig_e3():
     # e2-results.md:51 (G2-FP8); e3-results.md:36 (N4-FP8), :38 (R16-FP8). The c of each frontier point is taken
-    # from the independent score's per-point tables (private SCORE_E2 §5, SCORE_E3 per-configuration tables).
+    # from the independent score's per-point tables (not in this repository).
     concurrency = {
         "G2-FP8, 2 GPUs (TP2)": [16, 8, 4, 1],
         "N4-FP8, 4 GPUs (TP4+EP4)": [64, 32, 16, 8, 4, 1],

@@ -92,9 +92,9 @@ counting the request itself):
   independent signals.
 - *Log.* On N4, a prefill delays only its own scheduler: lines with an own prefill in the span run at 10.7–16.2 ms
   against 7.8–9.8 ms without (c = 4–16), up to 1.7×.
-- *Client.* Requests whose decode overlapped other requests' waiting time for more than 30 % of it (almost every R16
-  request at c ≥ 4) have TPOT 41.8–134.5 ms, against 11.0–11.5 ms for the few with no overlap. On N4 the same split
-  goes from 9.5–10.7 to 12.8–19.1 ms. At c = 4 the no-overlap requests are spread over the whole point; on R16 at
+- *Client.* Requests whose decode overlapped other requests' waiting time for more than 30 % of it (most R16
+  requests at c = 4, nearly all at c ≥ 8) have TPOT 41.8–134.5 ms, against 11.0–11.5 ms for the few with no
+  overlap. On N4 the same split goes from 9.5–10.7 to 12.8–19.1 ms. At c = 4 the no-overlap requests are spread over the whole point; on R16 at
   c = 8 and 16 they all decode in the last 38–43 % of it, with as few as 1–2 requests in flight, so there the comparison
   is partly confounded with a lower effective concurrency.
 - *Inference, not shown.* With attention-DP and EP, every rank takes part in each MoE layer's all-to-all, so a rank's
