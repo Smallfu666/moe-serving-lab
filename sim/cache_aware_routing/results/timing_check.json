@@ -1,0 +1,146 @@
+[
+ {
+  "unit": "G2-FP8",
+  "concurrency": 4,
+  "measured": {
+   "hit": 0.9540802422008886,
+   "ttft_p50_s": 0.07278556949070965,
+   "output_tok_per_s": 258.2621919221262,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.960094667047079,
+   "ttft_p50_s": 0.06352960306073685,
+   "output_tok_per_s": 246.18155299664937
+  }
+ },
+ {
+  "unit": "G2-FP8",
+  "concurrency": 8,
+  "measured": {
+   "hit": 0.9568785377027534,
+   "ttft_p50_s": 0.08179028698941693,
+   "output_tok_per_s": 371.9265467008219,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.9596907920360047,
+   "ttft_p50_s": 0.06519619726678672,
+   "output_tok_per_s": 319.525272623702
+  }
+ },
+ {
+  "unit": "G2-FP8",
+  "concurrency": 16,
+  "measured": {
+   "hit": 0.9585490390044291,
+   "ttft_p50_s": 0.09280532501482715,
+   "output_tok_per_s": 547.377317550683,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.9597358818246909,
+   "ttft_p50_s": 0.06584834282567131,
+   "output_tok_per_s": 451.39707244100003
+  }
+ },
+ {
+  "unit": "G2-FP8",
+  "concurrency": 32,
+  "measured": {
+   "hit": 0.8399977789554991,
+   "ttft_p50_s": 0.13218062665934363,
+   "output_tok_per_s": 479.47211379260443,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.8015880989553531,
+   "ttft_p50_s": 0.07816061069809566,
+   "output_tok_per_s": 337.0990701971243
+  }
+ },
+ {
+  "unit": "G2-FP8",
+  "concurrency": 64,
+  "measured": {
+   "hit": 0.39661629064736426,
+   "ttft_p50_s": 14.468487423999855,
+   "output_tok_per_s": 242.9178871728922,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.3971866082335238,
+   "ttft_p50_s": 18.10018900743444,
+   "output_tok_per_s": 187.3164468566788
+  }
+ },
+ {
+  "unit": "R16-FP8",
+  "concurrency": 4,
+  "measured": {
+   "hit": 0.5650351662167751,
+   "ttft_p50_s": 1.6923370944859926,
+   "output_tok_per_s": 76.29948659528249,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.569229225142852,
+   "ttft_p50_s": 1.5216195148792053,
+   "output_tok_per_s": 70.45594320745714
+  }
+ },
+ {
+  "unit": "R16-FP8",
+  "concurrency": 8,
+  "measured": {
+   "hit": 0.5841048249801092,
+   "ttft_p50_s": 1.7182450436327297,
+   "output_tok_per_s": 85.6521264583687,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.5769641791979562,
+   "ttft_p50_s": 1.5099270943188685,
+   "output_tok_per_s": 60.17425388748672
+  }
+ },
+ {
+  "unit": "R16-FP8",
+  "concurrency": 16,
+  "measured": {
+   "hit": 0.5983757181088535,
+   "ttft_p50_s": 1.7145536446672243,
+   "output_tok_per_s": 114.25239375480946,
+   "launches": 3,
+   "cut_by_deadline": false
+  },
+  "sim": {
+   "hit": 0.586921163299967,
+   "ttft_p50_s": 1.40217341464529,
+   "output_tok_per_s": 79.99302032228205
+  }
+ },
+ {
+  "unit": "R16-FP8",
+  "concurrency": 32,
+  "measured": {
+   "hit": 0.5679800716226034,
+   "ttft_p50_s": 1.3590873593154054,
+   "output_tok_per_s": 202.63516583703108,
+   "launches": 3,
+   "cut_by_deadline": true
+  },
+  "sim": {
+   "hit": 0.5923385956273056,
+   "ttft_p50_s": 1.5032784630198535,
+   "output_tok_per_s": 96.51737623937385
+  }
+ }
+]
