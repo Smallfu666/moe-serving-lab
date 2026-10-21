@@ -1,0 +1,1096 @@
+[
+ {
+  "dir": "E1 G-FP8 L1",
+  "label": "E1 G-FP8 L1 (2xGB200 TP2)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9579,
+    "sim_hit": 0.9573,
+    "error_pp": -0.06,
+    "exact_request_share": 0.8264,
+    "mae_tokens_per_request": 12.7
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9566,
+    "sim_hit": 0.9577,
+    "error_pp": 0.11,
+    "exact_request_share": 0.84,
+    "mae_tokens_per_request": 42.5
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.9264,
+    "sim_hit": 0.9179,
+    "error_pp": -0.86,
+    "exact_request_share": 0.7932,
+    "mae_tokens_per_request": 371.0
+   }
+  ]
+ },
+ {
+  "dir": "E1 G-FP8 L1",
+  "label": "E1 G-FP8 L1 (2xGB200 TP2)",
+  "admit_at": "send",
+  "overflow_pages": 17241,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9579,
+    "sim_hit": 0.9573,
+    "error_pp": -0.06,
+    "exact_request_share": 0.8264,
+    "mae_tokens_per_request": 12.7
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9566,
+    "sim_hit": 0.9577,
+    "error_pp": 0.11,
+    "exact_request_share": 0.84,
+    "mae_tokens_per_request": 42.5
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.9264,
+    "sim_hit": 0.9594,
+    "error_pp": 3.3,
+    "exact_request_share": 0.797,
+    "mae_tokens_per_request": 691.7
+   }
+  ]
+ },
+ {
+  "dir": "E1 G-FP8 L2",
+  "label": "E1 G-FP8 L2 (2xGB200 TP2)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9579,
+    "sim_hit": 0.9573,
+    "error_pp": -0.06,
+    "exact_request_share": 0.8264,
+    "mae_tokens_per_request": 12.7
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9566,
+    "sim_hit": 0.9577,
+    "error_pp": 0.12,
+    "exact_request_share": 0.8419,
+    "mae_tokens_per_request": 42.4
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.9264,
+    "sim_hit": 0.9179,
+    "error_pp": -0.86,
+    "exact_request_share": 0.7932,
+    "mae_tokens_per_request": 371.0
+   }
+  ]
+ },
+ {
+  "dir": "E1 G-FP8 L2",
+  "label": "E1 G-FP8 L2 (2xGB200 TP2)",
+  "admit_at": "send",
+  "overflow_pages": 17241,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9579,
+    "sim_hit": 0.9573,
+    "error_pp": -0.06,
+    "exact_request_share": 0.8264,
+    "mae_tokens_per_request": 12.7
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9566,
+    "sim_hit": 0.9577,
+    "error_pp": 0.12,
+    "exact_request_share": 0.8419,
+    "mae_tokens_per_request": 42.4
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.9264,
+    "sim_hit": 0.9594,
+    "error_pp": 3.3,
+    "exact_request_share": 0.797,
+    "mae_tokens_per_request": 691.7
+   }
+  ]
+ },
+ {
+  "dir": "E1 H-FP8 L1",
+  "label": "E1 H-FP8 L1 (2xH200 TP2)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9594,
+    "sim_hit": 0.9589,
+    "error_pp": -0.05,
+    "exact_request_share": 0.5289,
+    "mae_tokens_per_request": 10.3
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9141,
+    "sim_hit": 0.915,
+    "error_pp": 0.1,
+    "exact_request_share": 0.501,
+    "mae_tokens_per_request": 264.4
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.3079,
+    "sim_hit": 0.3084,
+    "error_pp": 0.05,
+    "exact_request_share": 0.933,
+    "mae_tokens_per_request": 55.9
+   }
+  ]
+ },
+ {
+  "dir": "E1 H-FP8 L1",
+  "label": "E1 H-FP8 L1 (2xH200 TP2)",
+  "admit_at": "send",
+  "overflow_pages": 225754862,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9594,
+    "sim_hit": 0.9589,
+    "error_pp": -0.05,
+    "exact_request_share": 0.5289,
+    "mae_tokens_per_request": 10.3
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9141,
+    "sim_hit": 0.9593,
+    "error_pp": 4.53,
+    "exact_request_share": 0.501,
+    "mae_tokens_per_request": 915.8
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.3079,
+    "sim_hit": 0.9609,
+    "error_pp": 65.3,
+    "exact_request_share": 0.085,
+    "mae_tokens_per_request": 13345.4
+   }
+  ]
+ },
+ {
+  "dir": "E1 H-FP8 L2",
+  "label": "E1 H-FP8 L2 (2xH200 TP2)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9594,
+    "sim_hit": 0.9589,
+    "error_pp": -0.05,
+    "exact_request_share": 0.5289,
+    "mae_tokens_per_request": 10.3
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9142,
+    "sim_hit": 0.9151,
+    "error_pp": 0.09,
+    "exact_request_share": 0.4952,
+    "mae_tokens_per_request": 268.0
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.3134,
+    "sim_hit": 0.313,
+    "error_pp": -0.04,
+    "exact_request_share": 0.9377,
+    "mae_tokens_per_request": 39.3
+   }
+  ]
+ },
+ {
+  "dir": "E1 H-FP8 L2",
+  "label": "E1 H-FP8 L2 (2xH200 TP2)",
+  "admit_at": "send",
+  "overflow_pages": 225922311,
+  "phases": [
+   {
+    "phase": "replay:1:0:4",
+    "requests": 121,
+    "measured_hit": 0.9594,
+    "sim_hit": 0.9589,
+    "error_pp": -0.05,
+    "exact_request_share": 0.5289,
+    "mae_tokens_per_request": 10.3
+   },
+   {
+    "phase": "replay:8:4:16",
+    "requests": 525,
+    "measured_hit": 0.9142,
+    "sim_hit": 0.9593,
+    "error_pp": 4.51,
+    "exact_request_share": 0.4952,
+    "mae_tokens_per_request": 913.3
+   },
+   {
+    "phase": "replay:32:20:32",
+    "requests": 1059,
+    "measured_hit": 0.3134,
+    "sim_hit": 0.9609,
+    "error_pp": 64.75,
+    "exact_request_share": 0.0869,
+    "mae_tokens_per_request": 13233.5
+   }
+  ]
+ },
+ {
+  "dir": "E2 G2-FP8 L1",
+  "label": "E2 G2-FP8 L1 (2xGB200 TP2)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9605,
+    "sim_hit": 0.9601,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8873,
+    "mae_tokens_per_request": 7.2
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.9541,
+    "sim_hit": 0.9601,
+    "error_pp": 0.6,
+    "exact_request_share": 0.8592,
+    "mae_tokens_per_request": 128.0
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9569,
+    "sim_hit": 0.9597,
+    "error_pp": 0.28,
+    "exact_request_share": 0.8681,
+    "mae_tokens_per_request": 70.3
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9585,
+    "sim_hit": 0.9597,
+    "error_pp": 0.12,
+    "exact_request_share": 0.8619,
+    "mae_tokens_per_request": 40.0
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.8367,
+    "sim_hit": 0.8246,
+    "error_pp": -1.21,
+    "exact_request_share": 0.7885,
+    "mae_tokens_per_request": 518.2
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.3962,
+    "sim_hit": 0.3963,
+    "error_pp": 0.01,
+    "exact_request_share": 0.9673,
+    "mae_tokens_per_request": 31.1
+   }
+  ]
+ },
+ {
+  "dir": "E2 G2-FP8 L1",
+  "label": "E2 G2-FP8 L1 (2xGB200 TP2)",
+  "admit_at": "send",
+  "overflow_pages": 8313356,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9605,
+    "sim_hit": 0.9601,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8873,
+    "mae_tokens_per_request": 7.2
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.9541,
+    "sim_hit": 0.9601,
+    "error_pp": 0.6,
+    "exact_request_share": 0.8592,
+    "mae_tokens_per_request": 128.0
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9569,
+    "sim_hit": 0.9597,
+    "error_pp": 0.28,
+    "exact_request_share": 0.8681,
+    "mae_tokens_per_request": 70.3
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9585,
+    "sim_hit": 0.9597,
+    "error_pp": 0.12,
+    "exact_request_share": 0.8619,
+    "mae_tokens_per_request": 40.0
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.8367,
+    "sim_hit": 0.9554,
+    "error_pp": 11.88,
+    "exact_request_share": 0.73,
+    "mae_tokens_per_request": 2351.6
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.3962,
+    "sim_hit": 0.9574,
+    "error_pp": 56.12,
+    "exact_request_share": 0.2677,
+    "mae_tokens_per_request": 11076.7
+   }
+  ]
+ },
+ {
+  "dir": "E2 G2-NV4 L1",
+  "label": "E2 G2-NV4 L1 (2xGB200 TP2 NVFP4)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9605,
+    "sim_hit": 0.9601,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8944,
+    "mae_tokens_per_request": 6.8
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.954,
+    "sim_hit": 0.9601,
+    "error_pp": 0.61,
+    "exact_request_share": 0.8803,
+    "mae_tokens_per_request": 126.6
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9568,
+    "sim_hit": 0.9597,
+    "error_pp": 0.29,
+    "exact_request_share": 0.8828,
+    "mae_tokens_per_request": 69.4
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9585,
+    "sim_hit": 0.9597,
+    "error_pp": 0.12,
+    "exact_request_share": 0.8766,
+    "mae_tokens_per_request": 39.0
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.9558,
+    "sim_hit": 0.9554,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8799,
+    "mae_tokens_per_request": 7.8
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.8099,
+    "sim_hit": 0.7815,
+    "error_pp": -2.85,
+    "exact_request_share": 0.8283,
+    "mae_tokens_per_request": 590.7
+   }
+  ]
+ },
+ {
+  "dir": "E2 G2-NV4 L1",
+  "label": "E2 G2-NV4 L1 (2xGB200 TP2 NVFP4)",
+  "admit_at": "send",
+  "overflow_pages": 245852,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9605,
+    "sim_hit": 0.9601,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8944,
+    "mae_tokens_per_request": 6.8
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.954,
+    "sim_hit": 0.9601,
+    "error_pp": 0.61,
+    "exact_request_share": 0.8803,
+    "mae_tokens_per_request": 126.6
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9568,
+    "sim_hit": 0.9597,
+    "error_pp": 0.29,
+    "exact_request_share": 0.8828,
+    "mae_tokens_per_request": 69.4
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9585,
+    "sim_hit": 0.9597,
+    "error_pp": 0.12,
+    "exact_request_share": 0.8766,
+    "mae_tokens_per_request": 39.0
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.9558,
+    "sim_hit": 0.9554,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8799,
+    "mae_tokens_per_request": 7.8
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.8099,
+    "sim_hit": 0.9574,
+    "error_pp": 14.74,
+    "exact_request_share": 0.713,
+    "mae_tokens_per_request": 2922.3
+   }
+  ]
+ },
+ {
+  "dir": "E2 H4-FP8 L1",
+  "label": "E2 H4-FP8 L1 (4xH200 TP4)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9621,
+    "sim_hit": 0.9617,
+    "error_pp": -0.04,
+    "exact_request_share": 0.5775,
+    "mae_tokens_per_request": 7.5
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.9577,
+    "sim_hit": 0.9617,
+    "error_pp": 0.39,
+    "exact_request_share": 0.5704,
+    "mae_tokens_per_request": 87.6
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9595,
+    "sim_hit": 0.9612,
+    "error_pp": 0.17,
+    "exact_request_share": 0.5238,
+    "mae_tokens_per_request": 49.9
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9607,
+    "sim_hit": 0.9613,
+    "error_pp": 0.07,
+    "exact_request_share": 0.523,
+    "mae_tokens_per_request": 29.4
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.9568,
+    "sim_hit": 0.957,
+    "error_pp": 0.02,
+    "exact_request_share": 0.5226,
+    "mae_tokens_per_request": 20.1
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.9591,
+    "sim_hit": 0.9589,
+    "error_pp": -0.02,
+    "exact_request_share": 0.5215,
+    "mae_tokens_per_request": 14.9
+   }
+  ]
+ },
+ {
+  "dir": "E2 H4-FP8 L1",
+  "label": "E2 H4-FP8 L1 (4xH200 TP4)",
+  "admit_at": "send",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9621,
+    "sim_hit": 0.9617,
+    "error_pp": -0.04,
+    "exact_request_share": 0.5775,
+    "mae_tokens_per_request": 7.5
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.9577,
+    "sim_hit": 0.9617,
+    "error_pp": 0.39,
+    "exact_request_share": 0.5704,
+    "mae_tokens_per_request": 87.6
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9595,
+    "sim_hit": 0.9612,
+    "error_pp": 0.17,
+    "exact_request_share": 0.5238,
+    "mae_tokens_per_request": 49.9
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9607,
+    "sim_hit": 0.9613,
+    "error_pp": 0.07,
+    "exact_request_share": 0.523,
+    "mae_tokens_per_request": 29.4
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.9568,
+    "sim_hit": 0.957,
+    "error_pp": 0.02,
+    "exact_request_share": 0.5226,
+    "mae_tokens_per_request": 20.1
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.9591,
+    "sim_hit": 0.9589,
+    "error_pp": -0.02,
+    "exact_request_share": 0.5215,
+    "mae_tokens_per_request": 14.9
+   }
+  ]
+ },
+ {
+  "dir": "E3 N4-FP8 replica1",
+  "label": "E3 N4-FP8 one replica (4xGB200 TP4)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9605,
+    "sim_hit": 0.9601,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8873,
+    "mae_tokens_per_request": 7.2
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.9541,
+    "sim_hit": 0.9601,
+    "error_pp": 0.6,
+    "exact_request_share": 0.8662,
+    "mae_tokens_per_request": 127.5
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9569,
+    "sim_hit": 0.9597,
+    "error_pp": 0.28,
+    "exact_request_share": 0.8755,
+    "mae_tokens_per_request": 69.9
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9586,
+    "sim_hit": 0.9597,
+    "error_pp": 0.12,
+    "exact_request_share": 0.86,
+    "mae_tokens_per_request": 40.1
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.9549,
+    "sim_hit": 0.9554,
+    "error_pp": 0.05,
+    "exact_request_share": 0.8686,
+    "mae_tokens_per_request": 25.8
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.9574,
+    "sim_hit": 0.9574,
+    "error_pp": -0.0,
+    "exact_request_share": 0.8624,
+    "mae_tokens_per_request": 17.6
+   }
+  ]
+ },
+ {
+  "dir": "E3 N4-FP8 replica1",
+  "label": "E3 N4-FP8 one replica (4xGB200 TP4)",
+  "admit_at": "send",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.9605,
+    "sim_hit": 0.9601,
+    "error_pp": -0.04,
+    "exact_request_share": 0.8873,
+    "mae_tokens_per_request": 7.2
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.9541,
+    "sim_hit": 0.9601,
+    "error_pp": 0.6,
+    "exact_request_share": 0.8662,
+    "mae_tokens_per_request": 127.5
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.9569,
+    "sim_hit": 0.9597,
+    "error_pp": 0.28,
+    "exact_request_share": 0.8755,
+    "mae_tokens_per_request": 69.9
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.9586,
+    "sim_hit": 0.9597,
+    "error_pp": 0.12,
+    "exact_request_share": 0.86,
+    "mae_tokens_per_request": 40.1
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 974,
+    "measured_hit": 0.9549,
+    "sim_hit": 0.9554,
+    "error_pp": 0.05,
+    "exact_request_share": 0.8686,
+    "mae_tokens_per_request": 25.8
+   },
+   {
+    "phase": "replay:64:52:64",
+    "requests": 2021,
+    "measured_hit": 0.9574,
+    "sim_hit": 0.9574,
+    "error_pp": -0.0,
+    "exact_request_share": 0.8624,
+    "mae_tokens_per_request": 17.6
+   }
+  ]
+ },
+ {
+  "dir": "E3 R16-FP8 L1",
+  "label": "E3 R16-FP8 L1 (16 DP ranks, round-robin)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.4873,
+    "sim_hit": 0.4872,
+    "error_pp": -0.01,
+    "exact_request_share": 0.9577,
+    "mae_tokens_per_request": 2.7
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.5654,
+    "sim_hit": 0.5642,
+    "error_pp": -0.11,
+    "exact_request_share": 0.9225,
+    "mae_tokens_per_request": 230.3
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.5878,
+    "sim_hit": 0.5867,
+    "error_pp": -0.11,
+    "exact_request_share": 0.8864,
+    "mae_tokens_per_request": 369.5
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.5969,
+    "sim_hit": 0.5948,
+    "error_pp": -0.21,
+    "exact_request_share": 0.8416,
+    "mae_tokens_per_request": 541.2
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 374,
+    "measured_hit": 0.557,
+    "sim_hit": 0.5673,
+    "error_pp": 1.03,
+    "exact_request_share": 0.9171,
+    "mae_tokens_per_request": 291.1
+   }
+  ]
+ },
+ {
+  "dir": "E3 R16-FP8 L1",
+  "label": "E3 R16-FP8 L1 (16 DP ranks, round-robin)",
+  "admit_at": "send",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.4873,
+    "sim_hit": 0.4872,
+    "error_pp": -0.01,
+    "exact_request_share": 0.9577,
+    "mae_tokens_per_request": 2.7
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.5654,
+    "sim_hit": 0.5642,
+    "error_pp": -0.11,
+    "exact_request_share": 0.9225,
+    "mae_tokens_per_request": 230.3
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.5878,
+    "sim_hit": 0.5867,
+    "error_pp": -0.11,
+    "exact_request_share": 0.8864,
+    "mae_tokens_per_request": 369.5
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.5969,
+    "sim_hit": 0.5948,
+    "error_pp": -0.21,
+    "exact_request_share": 0.8416,
+    "mae_tokens_per_request": 541.2
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 374,
+    "measured_hit": 0.557,
+    "sim_hit": 0.5673,
+    "error_pp": 1.03,
+    "exact_request_share": 0.9171,
+    "mae_tokens_per_request": 291.1
+   }
+  ]
+ },
+ {
+  "dir": "E3 R16-FP8 L2",
+  "label": "E3 R16-FP8 L2 (16 DP ranks, round-robin)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.4873,
+    "sim_hit": 0.4872,
+    "error_pp": -0.01,
+    "exact_request_share": 0.9577,
+    "mae_tokens_per_request": 2.7
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.5644,
+    "sim_hit": 0.575,
+    "error_pp": 1.06,
+    "exact_request_share": 0.9014,
+    "mae_tokens_per_request": 475.5
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.5817,
+    "sim_hit": 0.5812,
+    "error_pp": -0.06,
+    "exact_request_share": 0.9267,
+    "mae_tokens_per_request": 149.6
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.5901,
+    "sim_hit": 0.5882,
+    "error_pp": -0.19,
+    "exact_request_share": 0.8379,
+    "mae_tokens_per_request": 563.7
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 252,
+    "measured_hit": 0.5861,
+    "sim_hit": 0.585,
+    "error_pp": -0.1,
+    "exact_request_share": 0.9365,
+    "mae_tokens_per_request": 172.4
+   }
+  ]
+ },
+ {
+  "dir": "E3 R16-FP8 L2",
+  "label": "E3 R16-FP8 L2 (16 DP ranks, round-robin)",
+  "admit_at": "send",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.4873,
+    "sim_hit": 0.4872,
+    "error_pp": -0.01,
+    "exact_request_share": 0.9577,
+    "mae_tokens_per_request": 2.7
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.5644,
+    "sim_hit": 0.575,
+    "error_pp": 1.06,
+    "exact_request_share": 0.9014,
+    "mae_tokens_per_request": 475.5
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.5817,
+    "sim_hit": 0.5812,
+    "error_pp": -0.06,
+    "exact_request_share": 0.9267,
+    "mae_tokens_per_request": 149.6
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.5901,
+    "sim_hit": 0.5882,
+    "error_pp": -0.19,
+    "exact_request_share": 0.8379,
+    "mae_tokens_per_request": 563.7
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 252,
+    "measured_hit": 0.5861,
+    "sim_hit": 0.585,
+    "error_pp": -0.1,
+    "exact_request_share": 0.9365,
+    "mae_tokens_per_request": 172.4
+   }
+  ]
+ },
+ {
+  "dir": "E3 R16-FP8 L3",
+  "label": "E3 R16-FP8 L3 (16 DP ranks, round-robin)",
+  "admit_at": "first",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.4873,
+    "sim_hit": 0.4872,
+    "error_pp": -0.01,
+    "exact_request_share": 0.9577,
+    "mae_tokens_per_request": 2.7
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.5654,
+    "sim_hit": 0.5642,
+    "error_pp": -0.11,
+    "exact_request_share": 0.9225,
+    "mae_tokens_per_request": 230.3
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.5828,
+    "sim_hit": 0.5818,
+    "error_pp": -0.1,
+    "exact_request_share": 0.9084,
+    "mae_tokens_per_request": 173.2
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.6081,
+    "sim_hit": 0.6047,
+    "error_pp": -0.34,
+    "exact_request_share": 0.8416,
+    "mae_tokens_per_request": 464.4
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 354,
+    "measured_hit": 0.5609,
+    "sim_hit": 0.5616,
+    "error_pp": 0.07,
+    "exact_request_share": 0.9153,
+    "mae_tokens_per_request": 240.5
+   }
+  ]
+ },
+ {
+  "dir": "E3 R16-FP8 L3",
+  "label": "E3 R16-FP8 L3 (16 DP ranks, round-robin)",
+  "admit_at": "send",
+  "overflow_pages": 0,
+  "phases": [
+   {
+    "phase": "replay:1:52:4",
+    "requests": 142,
+    "measured_hit": 0.4873,
+    "sim_hit": 0.4872,
+    "error_pp": -0.01,
+    "exact_request_share": 0.9577,
+    "mae_tokens_per_request": 2.7
+   },
+   {
+    "phase": "replay:4:52:4",
+    "requests": 142,
+    "measured_hit": 0.5654,
+    "sim_hit": 0.5642,
+    "error_pp": -0.11,
+    "exact_request_share": 0.9225,
+    "mae_tokens_per_request": 230.3
+   },
+   {
+    "phase": "replay:8:52:8",
+    "requests": 273,
+    "measured_hit": 0.5828,
+    "sim_hit": 0.5818,
+    "error_pp": -0.1,
+    "exact_request_share": 0.9084,
+    "mae_tokens_per_request": 173.2
+   },
+   {
+    "phase": "replay:16:52:16",
+    "requests": 543,
+    "measured_hit": 0.6081,
+    "sim_hit": 0.6047,
+    "error_pp": -0.34,
+    "exact_request_share": 0.8416,
+    "mae_tokens_per_request": 464.4
+   },
+   {
+    "phase": "replay:32:52:32",
+    "requests": 354,
+    "measured_hit": 0.5609,
+    "sim_hit": 0.5616,
+    "error_pp": 0.07,
+    "exact_request_share": 0.9153,
+    "mae_tokens_per_request": 240.5
+   }
+  ]
+ }
+]

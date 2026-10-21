@@ -1,0 +1,81 @@
+{
+ "runs": [
+  {
+   "label": "E1 G-FP8 L1 (2xGB200 TP2)",
+   "dir": "E1 G-FP8 L1",
+   "max_total_num_tokens": 514048,
+   "page": 64,
+   "replicas": 1
+  },
+  {
+   "label": "E1 G-FP8 L2 (2xGB200 TP2)",
+   "dir": "E1 G-FP8 L2",
+   "max_total_num_tokens": 514048,
+   "page": 64,
+   "replicas": 1
+  },
+  {
+   "label": "E1 H-FP8 L1 (2xH200 TP2)",
+   "dir": "E1 H-FP8 L1",
+   "max_total_num_tokens": 160140,
+   "page": 1,
+   "replicas": 1
+  },
+  {
+   "label": "E1 H-FP8 L2 (2xH200 TP2)",
+   "dir": "E1 H-FP8 L2",
+   "max_total_num_tokens": 160140,
+   "page": 1,
+   "replicas": 1
+  },
+  {
+   "label": "E2 G2-FP8 L1 (2xGB200 TP2)",
+   "dir": "E2 G2-FP8 L1",
+   "max_total_num_tokens": 514048,
+   "page": 64,
+   "replicas": 1
+  },
+  {
+   "label": "E2 G2-NV4 L1 (2xGB200 TP2 NVFP4)",
+   "dir": "E2 G2-NV4 L1",
+   "max_total_num_tokens": 1019072,
+   "page": 64,
+   "replicas": 1
+  },
+  {
+   "label": "E2 H4-FP8 L1 (4xH200 TP4)",
+   "dir": "E2 H4-FP8 L1",
+   "max_total_num_tokens": 1522852,
+   "page": 1,
+   "replicas": 1
+  },
+  {
+   "label": "E3 N4-FP8 one replica (4xGB200 TP4)",
+   "dir": "E3 N4-FP8 replica1",
+   "max_total_num_tokens": 2235840,
+   "page": 64,
+   "replicas": 1
+  },
+  {
+   "label": "E3 R16-FP8 L1 (16 DP ranks, round-robin)",
+   "dir": "E3 R16-FP8 L1",
+   "max_total_num_tokens": 539136,
+   "page": 64,
+   "replicas": 16
+  },
+  {
+   "label": "E3 R16-FP8 L2 (16 DP ranks, round-robin)",
+   "dir": "E3 R16-FP8 L2",
+   "max_total_num_tokens": 539136,
+   "page": 64,
+   "replicas": 16
+  },
+  {
+   "label": "E3 R16-FP8 L3 (16 DP ranks, round-robin)",
+   "dir": "E3 R16-FP8 L3",
+   "max_total_num_tokens": 539136,
+   "page": 64,
+   "replicas": 16
+  }
+ ]
+}

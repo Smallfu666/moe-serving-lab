@@ -1,0 +1,71 @@
+{
+ "G2-FP8": {
+  "launches": [
+   "E2 G2-FP8 L1",
+   "E2 G2-FP8 L2",
+   "E2 G2-FP8 L3"
+  ],
+  "c1_requests": 426,
+  "ttft_intercept_s": 0.0444,
+  "prefill_tokens_per_s": 27601.2,
+  "r2": 0.8557,
+  "new_tokens_range": [
+   74,
+   6805
+  ],
+  "tpot_p50_s_by_c": {
+   "1": 0.0079,
+   "4": 0.01203,
+   "8": 0.01616,
+   "16": 0.02352,
+   "32": 0.04389,
+   "64": 0.11656
+  }
+ },
+ "R16-FP8": {
+  "launches": [
+   "E3 R16-FP8 L1",
+   "E3 R16-FP8 L2",
+   "E3 R16-FP8 L3"
+  ],
+  "c1_requests": 426,
+  "ttft_intercept_s": -0.0144,
+  "prefill_tokens_per_s": 4361.8,
+  "r2": 0.9885,
+  "new_tokens_range": [
+   975,
+   21473
+  ],
+  "tpot_p50_s_by_c": {
+   "1": 0.01052,
+   "4": 0.03475,
+   "8": 0.07867,
+   "16": 0.12572,
+   "32": 0.17908
+  }
+ },
+ "N4-FP8": {
+  "launches": [
+   "E3 N4-FP8 replica1",
+   "E3 N4-FP8 replica2",
+   "E3 N4-FP8 replica3",
+   "E3 N4-FP8 replica4"
+  ],
+  "c1_requests": 568,
+  "ttft_intercept_s": 0.0419,
+  "prefill_tokens_per_s": 45080.9,
+  "r2": 0.8052,
+  "new_tokens_range": [
+   74,
+   6805
+  ],
+  "tpot_p50_s_by_c": {
+   "1": 0.00722,
+   "4": 0.01024,
+   "8": 0.01297,
+   "16": 0.01741,
+   "32": 0.02543,
+   "64": 0.0383
+  }
+ }
+}
