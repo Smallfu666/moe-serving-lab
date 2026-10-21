@@ -41,7 +41,13 @@ directions seen in pilot runs; only P5 was blind).
    co-occur with the low ratio, but the cause is not isolated. Not a 16-GPU, rack-scale or interconnect claim.
 
 Figures, from [`figures/make_figures.py`](figures/make_figures.py): [E2 ratios](figures/fig1_e2_per_gpu_ratios.png) ·
-[E3 configurations](figures/fig2_e3_scaling.png) · [E4 attribution and Q3](figures/fig3_e4_attribution_q3.png).
+[E3 configurations](figures/fig2_e3_scaling.png) · [E4 attribution and Q3](figures/fig3_e4_attribution_q3.png) ·
+appendix: [H100 ÷ H8, not controlled](figures/figA1_e2_h100_uncontrolled.png).
+
+Post-hoc CPU analyses of the same logs, not preregistered and not scored: E4 class times per GPU per decode step
+([`results/e4-results.md`](results/e4-results.md#post-hoc-not-scored-the-same-times-per-gpu-per-decode-step)), and
+prefill/decode coupling on R16 plus client- vs engine-side timing
+([`results/posthoc-log-analyses.md`](results/posthoc-log-analyses.md)).
 
 ## What this study does not show
 

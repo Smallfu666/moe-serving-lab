@@ -2,6 +2,8 @@
 
 Every value below is copied by hand from the cited results line; nothing is computed from raw data.
 Run: uv run --with matplotlib python main-study/figures/make_figures.py
+
+Deferred, not drawn: per-launch ratio dots on fig1, and a union / per-GPU-step panel on fig3.
 """
 
 from pathlib import Path
@@ -59,29 +61,52 @@ def grouped_bars(ax, groups, series, labels, colors, hatches=None, fmt="{:.4f}",
 
 
 def fig_e2():
-    # e2-results.md:27, :29, :32, :33
+    # e2-results.md:27, :29, :32
     ratios = {
         "G2-FP8 (TP2) / H4-FP8 (TP4)": [2.0080, 2.1141, 2.1756],
         "G2-NV4 (TP2) / H4-FP8 (TP4)": [3.3202, 3.9475, 4.3252],
         "H8-FP8 (TP8+EP8) / H4-FP8 (TP4)": [0.6158, 0.5347, 0.2827],
-        "H100-8 / H8-FP8 (different cluster, NOT controlled)": [0.2599, 0.3005, None],
     }
     fig, ax = plt.subplots(figsize=(8, 4.2))
-    grouped_bars(ax, [f"{t} tok/s/user" for t in TARGETS], list(ratios.values()), list(ratios.keys()),
-                 SERIES, hatches=[None, None, None, "////"])
+    grouped_bars(ax, [f"{t} tok/s/user" for t in TARGETS], list(ratios.values()), list(ratios.keys()), SERIES)
     ax.axhline(1.0, color=MUTED, linewidth=1, linestyle="--")
     ax.set_ylabel("throughput per GPU ratio (numerator / denominator)")
     ax.set_title("E2: per-GPU output throughput ratio at matched interactivity", loc="left", color=INK)
     ax.legend(frameon=False, fontsize=7.5, loc="upper left")
     fig.text(0.01, 0.01, "Each platform at its own configuration; output tokens only; not a cost or GPU ranking. "
-             "n/e = not evaluable. Source: results/e2-results.md", fontsize=6.5, color=MUTED)
+             "The uncontrolled H100 ratio is in figA1. Source: results/e2-results.md", fontsize=6.5, color=MUTED)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(OUT / "fig1_e2_per_gpu_ratios.png")
     plt.close(fig)
 
 
+def fig_e2_h100_appendix():
+    # e2-results.md:33
+    ratios = {"H100-8-FP8 / H8-FP8 (both TP8+EP8)": [0.2599, 0.3005, None]}
+    fig, ax = plt.subplots(figsize=(5, 3.6))
+    grouped_bars(ax, [f"{t} tok/s/user" for t in TARGETS], list(ratios.values()), list(ratios.keys()),
+                 [SERIES[3]], hatches=["////"])
+    ax.axhline(1.0, color=MUTED, linewidth=1, linestyle="--")
+    ax.set_ylim(0, 1.1)
+    ax.set_ylabel("throughput per GPU ratio")
+    ax.set_title("Appendix: H100 vs H200, NOT a controlled comparison", loc="left", color=INK, fontsize=9)
+    ax.legend(frameon=False, fontsize=7, loc="upper left")
+    fig.text(0.01, 0.01, "Different cluster, driver (550 + CUDA-13 compatibility libraries) and container runtime.\n"
+             "n/e = not evaluable (H100 frontier ends at 80.81). Source: results/e2-results.md", fontsize=6.5,
+             color=MUTED)
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    fig.savefig(OUT / "figA1_e2_h100_uncontrolled.png")
+    plt.close(fig)
+
+
 def fig_e3():
-    # e2-results.md:51 (G2-FP8); e3-results.md:36 (N4-FP8), :38 (R16-FP8)
+    # e2-results.md:51 (G2-FP8); e3-results.md:36 (N4-FP8), :38 (R16-FP8). The c of each frontier point is taken
+    # from the independent score's per-point tables (private SCORE_E2 §5, SCORE_E3 per-configuration tables).
+    concurrency = {
+        "G2-FP8, 2 GPUs (TP2)": [16, 8, 4, 1],
+        "N4-FP8, 4 GPUs (TP4+EP4)": [64, 32, 16, 8, 4, 1],
+        "R16-FP8, 16 GPUs (TP16+attn-DP16+EP16, round-robin)": [16, 8, 4, 1],
+    }
     frontiers = {
         "G2-FP8, 2 GPUs (TP2)": [(42.33, 272.39), (61.87, 186.04), (83.18, 129.34), (126.71, 60.99)],
         "N4-FP8, 4 GPUs (TP4+EP4)": [(26.11, 327.53), (39.30, 233.82), (57.66, 180.58), (77.14, 113.07),
@@ -96,9 +121,16 @@ def fig_e3():
         "R16-FP8 (4 nodes) / N4-FP8 (1 node)": [0.02028, 0.02781, None],
     }
     fig, (left, right) = plt.subplots(1, 2, figsize=(10, 4.2))
-    for color, (label, pts) in zip(SERIES, frontiers.items()):
+    # N4 labels go below-left, off its falling line.
+    label_offset = [((3, 4), "left"), ((-4, -10), "right"), ((3, 4), "left")]
+    for color, (offset, ha), (label, pts) in zip(SERIES, label_offset, frontiers.items()):
         xs, ys = zip(*pts)
         left.plot(xs, ys, "-o", color=color, linewidth=2, markersize=5, label=label)
+        for (x, y), c in zip(pts, concurrency[label]):
+            left.annotate(f"c={c}", (x, y), xytext=offset, textcoords="offset points", fontsize=6, color=color, ha=ha)
+    left.annotate("R16: c = 32 cut by the 1 h end time,\nc = 64 and 128 never started", (8.10, 7.16),
+                  xytext=(45, 14), fontsize=6.5, color=SERIES[2],
+                  arrowprops={"arrowstyle": "-", "color": SERIES[2], "linewidth": 0.6})
     left.set_yscale("log")
     left.set_xlabel("interactivity (tok/s/user)")
     left.set_ylabel("output throughput (tok/s/GPU, log)")
@@ -113,10 +145,11 @@ def fig_e3():
     right.set_title("E3: registered per-GPU ratios", loc="left", color=INK)
     right.set_ylim(0.01, 6)
     right.legend(frameon=False, fontsize=7, loc="upper left", ncol=1)
-    fig.text(0.01, 0.01, "N4 vs G2 also differ in parallelism and node pool: not a GPU-count scaling result. "
-             "R16 is one untuned configuration; E3 does not isolate the cause. n/e = not evaluable. "
-             "Sources: results/e2-results.md, e3-results.md", fontsize=6.5, color=MUTED)
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.text(0.01, 0.01, "Frontier points only: G2-FP8's c = 32 and 64 are dominated (KV-limited) and off its frontier. "
+             "N4 vs G2 also differ in parallelism and node pool: not a GPU-count scaling result.\n"
+             "R16 is one untuned configuration and its frontier covers only c ≤ 16; E3 does not isolate the cause. "
+             "n/e = not evaluable. Sources: results/e2-results.md, e3-results.md", fontsize=6.5, color=MUTED)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
     fig.savefig(OUT / "fig2_e3_scaling.png")
     plt.close(fig)
 
@@ -185,5 +218,6 @@ def fig_e4():
 
 if __name__ == "__main__":
     fig_e2()
+    fig_e2_h100_appendix()
     fig_e3()
     fig_e4()
