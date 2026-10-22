@@ -56,8 +56,20 @@ prefill/decode coupling on R16 plus client- vs engine-side timing
 - Prefix hit rates are not estimates for real serving, because the replay uses recorded assistant content.
 - No other model, context length, workload or SGLang version.
 
-## What I would do next
+## Next step and CPU follow-up
 
-Re-run the four-node configuration with cache-aware (prefix-affinity) dispatch in place of round-robin. Every other
-flag stays fixed, under a new preregistration. This tests whether lost prefix reuse accounts for a large part of the
-0.02028 / 0.02781 ratios, and the result could go either way.
+The proposed next experiment was to re-run the four-node configuration with cache-aware (prefix-affinity) dispatch in
+place of round-robin, every other flag fixed, under a new preregistration. A CPU study of the existing logs has since
+addressed the cache part of that question without a GPU run
+([`../sim/cache_aware_routing/`](../sim/cache_aware_routing/); simulation and estimate, not a measurement):
+
+- A cache model fed the logged request timing reproduces R16's hit rates under round-robin over 16 DP ranks.
+- In simulation, session-sticky dispatch lifts the R16 hit rate to 0.95–0.96 and cuts new prefill tokens to
+  0.08–0.12 of round-robin.
+- An estimate from the logs puts sticky-dispatch R16 output throughput about 2.3–2.7× above the measured runs at
+  c = 4–16, or about 0.11–0.15 of N4 per GPU on that per-phase basis (measured: 0.04–0.06). By this estimate lost
+  prefix reuse is a real part of the R16 gap but not most of it. The E3 ratios above (0.02028 / 0.02781) are on the
+  matched-interactivity basis and are not re-estimated.
+
+A one-launch GPU check of that estimate is described in its
+[GPU decision](../sim/cache_aware_routing/README.md#gpu-decision) section; it has not been run.
