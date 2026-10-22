@@ -12,8 +12,8 @@ measurement, attribution, correctness.
 - **Question.** One MoE model (Qwen3-235B-A22B-Instruct-2507, public FP8 and NVFP4 checkpoints), one SGLang nightly
   (`a6a8c56015b8`), one replay of public coding-agent sessions: how do GB200 FP8, GB200 NVFP4 and H200 FP8 differ in
   latency, throughput per GPU and prefix-cache reuse, and where does decode-step GPU time go?
-- **Hardware.** 2–16 × GB200 and 2–8 × H200 for the 235B model, on one Slurm cluster ([`docs/hardware.md`](docs/hardware.md)), plus
-  8 × H100 on another cluster as an uncontrolled extra.
+- **Hardware.** 2–16 × GB200 and 2–8 × H200 for the 235B model, on one Slurm cluster
+  ([`docs/hardware.md`](docs/hardware.md)), plus 8 × H100 on another cluster as an uncontrolled extra.
 - **Findings** (each quoted from an independently scored results file; descriptive, no single-cause attribution):
   - Same 2 GPUs, one request at a time: TPOT p50 7.943 ms on GB200 FP8, 9.932 ms on H200 FP8, 6.625 ms on GB200
     NVFP4. NVFP4 is not shown lossless (30 GSM8K answers move against FP8, limit 20)
@@ -21,8 +21,8 @@ measurement, attribution, correctness.
   - Each platform at its own configuration, output throughput per GPU at 50 / 75 / 100 tok/s/user: GB200 FP8 TP2 ÷
     H200 TP4 = 2.0080 / 2.1141 / 2.1756; GB200 NVFP4 TP2 ÷ H200 TP4 = 3.3202 / 3.9475 / 4.3252; H200 TP8 + EP8 ÷
     TP4 = 0.6158 / 0.5347 / 0.2827 ([E2](main-study/results/e2-results.md)). Not a cost ratio or a GPU ranking.
-  - nsys attribution of decode steps finds no single dominant kernel class for either GB200 TP2 vs H200 TP4 pair
-    ([E4](main-study/results/e4-results.md)).
+  - nsys attribution of decode steps finds no single dominant kernel class, under the preregistered rule, for either
+    GB200 TP2 vs H200 TP4 pair ([E4](main-study/results/e4-results.md)).
   - One untuned 16-GPU server across four GB200 nodes (round-robin dispatch over 16 attention-DP ranks) reaches
     0.02028 / 0.02781 of the one-node throughput per GPU at 50 / 75 tok/s/user ([E3](main-study/results/e3-results.md)).
     A CPU replay of its logs reproduces its low prefix-hit rate from round-robin dispatch alone, and estimates that
@@ -108,24 +108,24 @@ Main study:
 
 Each case study has its own Reproduce section.
 
-## Terms
+## 8. Terms
 
 | Term | Meaning here |
 |---|---|
 | TTFT / TPOT | time to first token; time per output token after the first, from the client's per-request records |
 | c | closed-loop concurrency: number of replay workers, each running one session's turns in order |
-| tok/s/user | interactivity, 1000 ÷ TPOT in ms; E2 compares platforms at matched values of it |
+| tok/s/user | interactivity: median per-request decode rate, (output tokens − 1) ÷ (end-to-end − TTFT); E2 compares platforms at matched values of it |
 | TP / EP / attention-DP | tensor, expert and attention data parallelism (SGLang `--tp`, `--ep-size`, `--attn-dp-size`) |
 | prefix hit rate | Σ cached prompt tokens ÷ Σ prompt tokens over all requests of a point (SGLang's radix prefix cache) |
 | A/A floor | difference between two launches of the same arm; a smaller arm difference is not resolved |
 | NVFP4 | 4-bit floating-point weights with block scales (NVIDIA ModelOpt checkpoint) |
 | SU | the cluster's billing unit: H200 60 and GB200 100 SU per GPU-hour |
 
-## 8. Prequel
+## 9. Prequel
 
 Earlier deployment record: <https://github.com/Smallfu666/glm-5.2-sglang>
 
-## 9. Acknowledgements and third-party licenses
+## 10. Acknowledgements and third-party licenses
 
 Software, models and data used or referenced. Nothing below is redistributed in this repository.
 
@@ -153,6 +153,6 @@ licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Only s
 model's chat template and truncated at 32,768 tokens of context, with recorded answers capped at 1,024 tokens
 (`e1-prereg.md` §2).
 
-## 10. Notes on how this was made
+## 11. Notes on how this was made
 
 _TODO (author): decide whether and how to describe AI assistance before this repository is made public._
