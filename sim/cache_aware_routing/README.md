@@ -1,7 +1,8 @@
 # Cache-aware routing: CPU study
 
 Question: the main study summary proposes re-running the 16-GPU configuration (R16: one SGLang server, TP16 +
-attention-DP16 + EP16, round-robin dispatch) with cache-aware dispatch, at about 8,000 SU (an earlier estimate; SU is the cluster's billing unit, 100 per GB200 GPU-hour). Can the existing logs,
+attention-DP16 + EP16, round-robin dispatch) with cache-aware dispatch, at about 8,000 SU (three 1.5-hour launches on 16 × GB200 plus a smoke test; SU is the cluster's billing unit, 100 per
+GB200 GPU-hour). Can the existing logs,
 plus a validated simulation, answer that question without a GPU?
 
 Short answer:

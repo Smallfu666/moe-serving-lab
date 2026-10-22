@@ -21,18 +21,19 @@ measurement, attribution, correctness.
   - Each platform at its own configuration, output throughput per GPU at 50 / 75 / 100 tok/s/user: GB200 FP8 TP2 ÷
     H200 TP4 = 2.0080 / 2.1141 / 2.1756; GB200 NVFP4 TP2 ÷ H200 TP4 = 3.3202 / 3.9475 / 4.3252; H200 TP8 + EP8 ÷
     TP4 = 0.6158 / 0.5347 / 0.2827 ([E2](main-study/results/e2-results.md)). Not a cost ratio or a GPU ranking.
-  - nsys attribution of decode steps finds no single dominant kernel class, under the preregistered rule, for either
-    GB200 TP2 vs H200 TP4 pair ([E4](main-study/results/e4-results.md)).
+  - nsys attribution of decode steps finds no single kernel class dominating the per-token GPU-time difference
+    between GB200 TP2 and H200 TP4, under the preregistered rule, for either pair
+    ([E4](main-study/results/e4-results.md)).
   - One untuned 16-GPU server across four GB200 nodes (round-robin dispatch over 16 attention-DP ranks) reaches
     0.02028 / 0.02781 of the one-node throughput per GPU at 50 / 75 tok/s/user ([E3](main-study/results/e3-results.md)).
-    A CPU replay of its logs reproduces its low prefix-hit rate from round-robin dispatch alone, and estimates that
+    A cache simulation driven by its logs reproduces its low prefix-hit rate from round-robin dispatch alone, and estimates that
     session-sticky dispatch would raise its throughput about 2.3–2.7× (c = 4–16), which still leaves most of the
     per-GPU gap to one node ([`sim/cache_aware_routing`](sim/cache_aware_routing/); an estimate, not a measurement).
 
 ![E2: per-GPU output throughput ratio at matched interactivity](main-study/figures/fig1_e2_per_gpu_ratios.png)
 
-*E2, throughput per GPU of each numerator ÷ H200 TP4 at three interactivity targets; three launches per
-configuration; output tokens only. Source: [`main-study/results/e2-results.md`](main-study/results/e2-results.md).*
+*E2, throughput per GPU of each numerator ÷ H200 TP4 at three interactivity targets; three registered launches
+per configuration (two at three points, see the results file); output tokens only. Source: [`main-study/results/e2-results.md`](main-study/results/e2-results.md).*
 
 ## 2. Main study: same MoE, same agentic workload — H200 FP8 vs GB200 FP8 vs GB200 NVFP4
 
@@ -54,8 +55,8 @@ See [`main-study/`](main-study/).
 
 | Folder | Question | Answer in one line |
 |---|---|---|
-| [`sim/attn_dp_vs_tp`](sim/attn_dp_vs_tp/) | Would attention-DP8 + EP8 beat the measured TP8 + EP8 on 8 × H200? | NVIDIA AIConfigurator, checked against the E4 step times, predicts DP8 slower at the batch sizes behind E2's targets and faster only at large batch with balanced ranks |
-| [`sim/cache_aware_routing`](sim/cache_aware_routing/) | How much of the 16-GPU result is lost prefix reuse from round-robin dispatch? | A cache model reproduces the logged hit rates (mean error 0.27 pp over 51 points); session-sticky dispatch would lift the hit rate to 0.95–0.96, and an estimate puts throughput 2.3–2.7× higher, still far below one node per GPU |
+| [`sim/attn_dp_vs_tp`](sim/attn_dp_vs_tp/) | Would attention-DP8 + EP8 beat the measured TP8 + EP8 on 8 × H200? | NVIDIA AIConfigurator, checked against the E4 step times, predicts DP8 slower at the batch sizes behind E2's targets and faster only at large batch and long context with balanced ranks |
+| [`sim/cache_aware_routing`](sim/cache_aware_routing/) | How much of the 16-GPU result is lost prefix reuse from round-robin dispatch? | A cache model reproduces the logged hit rates (mean |error| 0.27 pp over 51 points); session-sticky dispatch would lift the hit rate to 0.95–0.96, and an estimate puts throughput 2.3–2.7× higher, still far below one node per GPU |
 
 Both are simulations or estimates built on the main study's logs, labelled as such inside; neither is a GPU
 measurement.
@@ -102,7 +103,8 @@ Main study:
 - **Serving runs.** [`main-study/harness/`](main-study/harness/) holds the launch wrapper and clients with
   placeholders for cluster-specific values; the Slurm wrappers that filled them in are not published.
 - **Not stored here.** Model weights, trajectories, raw logs and profiler reports. The scripts in
-  `main-study/analysis/` and `sim/` take the raw folder as an argument; their small derived outputs are committed.
+  `main-study/analysis/` and `sim/` take the raw folder as an argument (`sim/cache_aware_routing` also needs a private
+  map from launch label to folder); their small derived outputs are committed.
 - **Tests (CPU only).** `cd main-study/analysis && python3 -m unittest discover -s tests`, and the same in
   `main-study/harness` (its client tests need `aiohttp`).
 
@@ -117,8 +119,8 @@ Each case study has its own Reproduce section.
 | tok/s/user | interactivity: median per-request decode rate, (output tokens − 1) ÷ (end-to-end − TTFT); E2 compares platforms at matched values of it |
 | TP / EP / attention-DP | tensor, expert and attention data parallelism (SGLang `--tp`, `--ep-size`, `--attn-dp-size`) |
 | prefix hit rate | Σ cached prompt tokens ÷ Σ prompt tokens over all requests of a point (SGLang's radix prefix cache) |
-| A/A floor | difference between two launches of the same arm; a smaller arm difference is not resolved |
-| NVFP4 | 4-bit floating-point weights with block scales (NVIDIA ModelOpt checkpoint) |
+| A/A floor | difference between two launches of the same arm; an arm difference counts as resolved only above a threshold derived from it (exact rule in each preregistration; [`docs/method.md`](docs/method.md) §2) |
+| NVFP4 | NVIDIA's 4-bit floating-point format with FP8 block scales (ModelOpt checkpoint) |
 | SU | the cluster's billing unit: H200 60 and GB200 100 SU per GPU-hour |
 
 ## 9. Prequel
@@ -149,8 +151,9 @@ Software, models and data used or referenced. Nothing below is redistributed in 
 Dataset attribution: "OpenHands Trajectories with Qwen3-Coder-480B-A35B-Instruct", Trofimova et al., Nebius, 2025
 ([dataset card](https://huggingface.co/datasets/nebius/SWE-rebench-openhands-trajectories), revision `35455389`),
 licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Only sampled session ids are stored here
-(`main-study/sample/e1-sessions.txt`). Changes made for the runs: the sampled sessions are re-tokenized with the
-model's chat template and truncated at 32,768 tokens of context, with recorded answers capped at 1,024 tokens
+(`main-study/sample/e1-sessions.txt`). Changes made for the runs: the sampled sessions are tokenized with the
+model's chat template (message fields reduced to role, content and tool calls) and cut at the first turn whose prompt
+plus min(answer, 1,024) exceeds 32,768 tokens; the replay asks for at most 1,024 output tokens per turn
 (`e1-prereg.md` §2).
 
 ## 11. Notes on how this was made

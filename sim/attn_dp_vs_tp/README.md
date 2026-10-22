@@ -9,8 +9,8 @@ targets: +4 % to +36 % per decode step at a global batch of 8 to 16 with 8k to 3
 B = 8, where some DP ranks sit idle (§4). It **wins** only with large
 batches and long contexts (−14 % to −24 % at B = 64 with 16k to 33k contexts), and only if the load across DP ranks
 is balanced. With the per-rank imbalance that round-robin dispatch produces on the study's replay, most of that win goes away.
-A full measured DP8-vs-TP8 run (about 1,700 SU by an earlier estimate; SU is the cluster's billing unit, 60 per H200
-GPU-hour) is not worth it. A one-job check of the simulator (480 SU) is optional (§6).
+A full measured DP8-vs-TP8 run (a 0.5-hour smoke test plus three 1-hour launches on 8 × H200, about 1,700 SU; SU is
+the cluster's billing unit, 60 per H200 GPU-hour) is not worth it. A one-job check of the simulator (480 SU) is optional (§6).
 
 Evidence labels used below: **[measured]** = E4/E2 numbers re-quoted from the results files; **[sim]** = AIConfigurator
 output; **[bytes]** = arithmetic from the model config; **[replay]** = derived on CPU from the E2 per-request records;
@@ -177,7 +177,7 @@ saving to offset its weight and communication costs. It was not simulated.
 
 ## 6. Recommendation
 
-**Do not spend the planned budget (about 1,700 SU by an earlier estimate) on a measured DP8 vs TP8 run for this workload.** The predicted answer in the E2 range
+**Do not spend the planned budget (about 1,700 SU, as above) on a measured DP8 vs TP8 run for this workload.** The predicted answer in the E2 range
 is "DP8 is slower". The only win is at high batch with balanced ranks. Round-robin and the multi-turn prefix cache
 make that region unfavourable on the study's replay.
 

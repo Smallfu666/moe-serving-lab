@@ -67,7 +67,7 @@ addressed the cache part of that question without a GPU run
 - In simulation, session-sticky dispatch lifts the R16 hit rate to 0.95–0.96 and cuts new prefill tokens to
   0.08–0.12 of round-robin.
 - An estimate from the logs puts sticky-dispatch R16 output throughput about 2.3–2.7× above the measured runs at
-  c = 4–16, or about 0.11–0.15 of N4 per GPU on that per-phase basis (measured: 0.04–0.06). By this estimate lost
+  c = 4–16, or about 0.11–0.15 of N4 per GPU at the same concurrency c (measured: 0.04–0.06). By this estimate lost
   prefix reuse is a real part of the R16 gap but not most of it. The E3 ratios above (0.02028 / 0.02781) are on the
   matched-interactivity basis and are not re-estimated.
 

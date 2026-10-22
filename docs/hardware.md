@@ -21,7 +21,8 @@ not a controlled comparison with the rest.
 
 The 8 × H100 (80 GB) configuration ran on another cluster with driver 550 plus CUDA-13 compatibility libraries and a
 different container runtime (`singularity` instead of `apptainer`); see
-[`../main-study/prereg/e2-prereg.md`](../main-study/prereg/e2-prereg.md) §2 and §2a.
+[`../main-study/prereg/e2-prereg.md`](../main-study/prereg/e2-prereg.md) §2 and §2a and
+[`../main-study/results/e2-results.md`](../main-study/results/e2-results.md).
 
 - The H200 and GB200 drivers are the same generation but different minor versions.
 - The cluster login node is x86_64. The GB200 compute nodes are aarch64. An x86 container, wheel or virtualenv built on
