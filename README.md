@@ -56,7 +56,7 @@ See [`main-study/`](main-study/).
 | Folder | Question | Answer in one line |
 |---|---|---|
 | [`sim/attn_dp_vs_tp`](sim/attn_dp_vs_tp/) | Would attention-DP8 + EP8 beat the measured TP8 + EP8 on 8 × H200? | NVIDIA AIConfigurator, checked against the E4 step times, predicts DP8 slower at the batch sizes behind E2's targets and faster only at large batch and long context with balanced ranks |
-| [`sim/cache_aware_routing`](sim/cache_aware_routing/) | How much of the 16-GPU result is lost prefix reuse from round-robin dispatch? | A cache model reproduces the logged hit rates (mean |error| 0.27 pp over 51 points); session-sticky dispatch would lift the hit rate to 0.95–0.96, and an estimate puts throughput 2.3–2.7× higher, still far below one node per GPU |
+| [`sim/cache_aware_routing`](sim/cache_aware_routing/) | How much of the 16-GPU result is lost prefix reuse from round-robin dispatch? | A cache model reproduces the logged hit rates (mean absolute error 0.27 pp over 51 points); session-sticky dispatch would lift the hit rate to 0.95–0.96, and an estimate puts throughput 2.3–2.7× higher, still far below one node per GPU |
 
 Both are simulations or estimates built on the main study's logs, labelled as such inside; neither is a GPU
 measurement.
@@ -152,7 +152,7 @@ Dataset attribution: "OpenHands Trajectories with Qwen3-Coder-480B-A35B-Instruct
 ([dataset card](https://huggingface.co/datasets/nebius/SWE-rebench-openhands-trajectories), revision `35455389`),
 licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Only sampled session ids are stored here
 (`main-study/sample/e1-sessions.txt`). Changes made for the runs: the sampled sessions are tokenized with the
-model's chat template (message fields reduced to role, content and tool calls) and cut at the first turn whose prompt
+model's chat template (message fields reduced to role, content, tool calls and their ids) and cut at the first turn whose prompt
 plus min(answer, 1,024) exceeds 32,768 tokens; the replay asks for at most 1,024 output tokens per turn
 (`e1-prereg.md` §2).
 
