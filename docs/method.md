@@ -1,7 +1,6 @@
 # Method
 
-> Draft. The author will rewrite this page in their own words. It describes how every number in this repository was
-> produced and how far each number may be read.
+How every number in this repository was produced, and how far each number may be read.
 
 ## 1. Preregister before running
 
@@ -49,7 +48,7 @@ Each claim names the kind of evidence behind it, and kinds are not mixed in one 
 | RUNTIME | Timing or accuracy from unprofiled runs | median TPOT over interleaved launches |
 | TRACE | What a profiler showed in a few captured steps | which kernels ran in a CUDA-graph replay |
 | SOURCE | Reading the code at a pinned commit; nothing was run | "this function drops the configured budget" |
-| SPEC | A vendor datasheet number we did not measure | HBM bandwidth |
+| SPEC | A vendor datasheet number, not measured here | HBM bandwidth |
 
 Profiler-attached numbers are never compared with unprofiled timing. A summed kernel time is not called "the
 bottleneck"; it can include waits and overlap.
@@ -61,13 +60,20 @@ job state and elapsed time are not used for this (a job can show `COMPLETED` in 
 
 ## 6. Engine configuration parity (main study)
 
-_To be expanded._ Two rules carried over from an earlier three-engine comparison:
+Two rules carried over from an earlier three-engine comparison:
 
 - The KV-cache pool must be defined the same way across arms (memory left after weights vs a fraction of total memory
   are not the same thing).
 - Server time-to-ready is recorded separately from serving metrics.
 
+The main study runs one engine, so the first rule reduces to recording what SGLang chose. The memory fraction was left
+at SGLang's default for each platform and parallelism, not equalised; the flags passed and the settings the server
+resolved (memory fraction, page size, backends) are listed per configuration in
+[`../main-study/README.md`](../main-study/README.md#configurations-and-server-flags); the E2 and E3 results files give
+each configuration's KV pool in tokens.
+
 ## 7. What is not published here
 
-Raw logs, profiler reports and full harnesses stay in private notes. Each write-up ends with a provenance line that
-names the private source by a neutral label and date.
+Raw logs, profiler reports, the independent score files and the cluster-specific job wrappers stay in private notes.
+The harness (with placeholders for cluster values), the analysis scripts and their small derived outputs are
+published. Each write-up ends with a provenance line that names the private source by a neutral label and date.
