@@ -2,14 +2,15 @@
 
 **Question.** On one 8 × H200 node serving `Qwen/Qwen3-235B-A22B-Instruct-2507-FP8` (94 layers, 64 query heads,
 **4 KV heads**, head_dim 128, 128 experts, top-8; bf16 KV), does SGLang attention-DP8 + EP8 (`--tp 8 --attn-dp-size 8
---ep-size 8`) beat the TP8 + EP8 we measured (`--tp 8 --ep-size 8`, E2/E4 "H8")? And is it worth GPU time to find out?
+--ep-size 8`) beat the measured TP8 + EP8 (`--tp 8 --ep-size 8`, E2/E4 "H8")? And is it worth GPU time to find out?
 
 **Answer in one line.** The simulator predicts that DP8 is **slower** at the batches behind E2's matched-interactivity
 targets: +4 % to +36 % per decode step at a global batch of 8 to 16 with 8k to 33k contexts, and worse below
 B = 8, where some DP ranks sit idle (§4). It **wins** only with large
 batches and long contexts (−14 % to −24 % at B = 64 with 16k to 33k contexts), and only if the load across DP ranks
-is balanced. With the per-rank imbalance that round-robin dispatch produces on our replay, most of that win goes away.
-A full measured DP8-vs-TP8 run (about 1,700 SU, planned in internal notes that are not in this repo) is not worth it. A one-job check of the simulator (480 SU) is optional (§6).
+is balanced. With the per-rank imbalance that round-robin dispatch produces on the study's replay, most of that win goes away.
+A full measured DP8-vs-TP8 run (a 0.5-hour smoke test plus three 1-hour launches on 8 × H200, about 1,700 SU; SU is
+the cluster's billing unit, 60 per H200 GPU-hour) is not worth it. A one-job check of the simulator (480 SU) is optional (§6).
 
 Evidence labels used below: **[measured]** = E4/E2 numbers re-quoted from the results files; **[sim]** = AIConfigurator
 output; **[bytes]** = arithmetic from the model config; **[replay]** = derived on CPU from the E2 per-request records;
@@ -20,8 +21,8 @@ output; **[bytes]** = arithmetic from the model config; **[replay]** = derived o
 | Tool | What it models | Fit for this question |
 |---|---|---|
 | **NVIDIA AIConfigurator** (`ai-dynamo/aiconfigurator`; now on PyPI as `aisimulate` 0.12.0, Apache-2.0) | Per-op latency from kernel timings measured on real GPUs, per system, backend and version; TP, attention-DP, MoE-TP/EP; static batches and in-flight batching | **Chosen.** Ships `h200_sxm` silicon data for the **SGLang 0.5.14** backend; its support matrix lists `Qwen/Qwen3-235B-A22B-FP8` on h200_sxm + sglang as PASS. It sets KV heads per GPU to ceil(4 / tp), so it models the KV-head replication at TP8 |
-| BBuf `model-compute-simulation` skill (no license; read in place) | Op sequence, tensor shapes, FLOPs and MFU from a model config and TP/DP/EP | Not used. It counts FLOPs, and decode here is limited by memory traffic, not FLOPs. Its script directory was empty when we read it |
-| Vidur, LLMServingSim, LLMCompass | Vidur: a scheduler simulator driven by profiled dense-model ops. LLMServingSim: a system-level serving simulator. LLMCompass: a hardware-design roofline | **Not installed or checked in this study.** We do not know of one with SGLang attention-DP plus EP and H200 data, but we did not verify that. AIConfigurator already had the right backend, GPU and model, so we used it |
+| BBuf `model-compute-simulation` skill (no license; read in place) | Op sequence, tensor shapes, FLOPs and MFU from a model config and TP/DP/EP | Not used. It counts FLOPs, and decode here is limited by memory traffic, not FLOPs. Its script directory was empty when it was read |
+| Vidur, LLMServingSim, LLMCompass | Vidur: a scheduler simulator driven by profiled dense-model ops. LLMServingSim: a system-level serving simulator. LLMCompass: a hardware-design roofline | **Not installed or checked in this study.** None is known to carry SGLang attention-DP plus EP and H200 data, but that was not verified. AIConfigurator already had the right backend, GPU and model, so it was used |
 
 Why the SGLang version matters: the E1–E4 server is a nightly (`a6a8c560`, reported as `0.0.0.dev1+ga6a8c5601`).
 AIConfigurator's newest H200 SGLang tables are 0.5.14. The validation in §3 checks whether that mismatch matters for
@@ -31,7 +32,7 @@ these shapes.
 
 1. `run_aic.py` runs `aiconfigurator cli estimate --estimate-mode static_gen` for each point: a fixed batch decodes
    64 steps after an ISL-token prompt, which is the shape of the E4 decode windows (16,384-token prompts, at least 96
-   warm tokens, 64 profiled steps; we use ISL = 16,480). Flags: `--backend sglang --kvcache-quant-mode bfloat16
+   warm tokens, 64 profiled steps; ISL = 16,480 here). Flags: `--backend sglang --kvcache-quant-mode bfloat16
    --fmha-quant-mode bfloat16`; MoE and GEMM quantization are inferred from the checkpoint as `fp8_block`. The
    model config is the local `model/…/config.json` of the E1–E4 revision `e156cb4e`. In AIConfigurator `--batch-size` is
    **per attention-DP rank**, so DP points pass B / dp.
@@ -77,12 +78,11 @@ these shapes.
   Simulated TP4 1629 / 2693 / 4050 and TP8 1612 / 2667 / 4059. Error −5 % at B = 4 and +16 % to +22 % at B = 8 and
   16. Both the measurement and the simulator show **no attention shrink from TP4 to TP8**. [bytes] At both TP sizes
   each GPU holds one KV head (ceil(4/4) = ceil(4/8) = 1), so each GPU reads the same 48,128 B of KV per token
-  (94 layers × K and V × 1 head × 128 × 2 B). That is the KV-head replication reading from an
-  earlier internal review (not in this repo). We have it from arithmetic and from a simulator that encodes the same rule. It is
-  still not a measured KV read. At the spec 4.8 TB/s HBM figure, the measured attention time corresponds to 39 %
+  (94 layers × K and V × 1 head × 128 × 2 B). That KV-head replication rests on this arithmetic and on a
+  simulator that encodes the same rule. It is still not a measured KV read. At the spec 4.8 TB/s HBM figure, the measured attention time corresponds to 39 %
   (B = 4), 58 % (B = 8) and 79 % (B = 16) of the bandwidth bound [bytes, SPEC].
 
-The error is small enough that we did not fit a separate roofline. The byte arithmetic above is the cross-check.
+The error is small enough that no separate roofline was fitted. The byte arithmetic above is the cross-check.
 Neither the simulator nor E4 has a **DP-attention measurement on H200**, so the DP side of §4 is the simulator's
 extrapolation from its own silicon tables.
 
@@ -118,7 +118,7 @@ both KV pools. For B ≥ 64 the imbalance uses the c = 64 value, the nearest ava
 
 - **What DP buys** [bytes]: no replicated KV head. Each GPU reads 4 heads for B/8 requests instead of 1 head for all
   B, so KV bytes per GPU per step halve. The KV pool also roughly doubles: the TP8 pool is 2,127,459 tokens
-  [measured, E2], and we estimate about 4.0 M tokens for DP8 after the extra attention weights are taken out [bytes].
+  [measured, E2], and the estimate for DP8 is about 4.0 M tokens after the extra attention weights are taken out [bytes].
 - **What DP costs:**
   - Every GPU holds and reads the full attention weights: 6.7 GB of FP8 per step against 0.89 GB at TP8 [bytes].
     The simulator charges about +2.0 ms per step for the QKV and O-proj GEMMs [sim]. That is 1.6 × the
@@ -164,11 +164,11 @@ and only 50 reaches B = 16 or somewhat beyond.
 replay's imbalance and cache loss work against DP there.
 
 **GB200.** On 4-GPU GB200 (N4, TP4+EP4), KV heads are not replicated (4 heads over 4 ranks), so DP4 has no KV
-saving to offset its weight and communication costs. We did not simulate it.
+saving to offset its weight and communication costs. It was not simulated.
 
 ## 5. What this does not establish
 
-- No DP-attention number is measured. The DP side rests on AIConfigurator's SGLang 0.5.14 tables, not our nightly.
+- No DP-attention number is measured. The DP side rests on AIConfigurator's SGLang 0.5.14 tables, not the study's nightly.
 - Static decode only: no prefill, no chunked-prefill interleaving, no scheduler or CUDA-graph padding effects, no
   closed-loop dynamics.
 - The imbalance adjustment is a sensitivity estimate built on a proportionality assumption, from one launch's request
@@ -177,9 +177,9 @@ saving to offset its weight and communication costs. We did not simulate it.
 
 ## 6. Recommendation
 
-**Do not spend the planned budget (about 1,700 SU, estimated in internal notes that are not in this repo) on a measured DP8 vs TP8 run for this workload.** The predicted answer in the E2 range
+**Do not spend the planned budget (about 1,700 SU, as above) on a measured DP8 vs TP8 run for this workload.** The predicted answer in the E2 range
 is "DP8 is slower". The only win is at high batch with balanced ranks. Round-robin and the multi-turn prefix cache
-make that region unfavourable on our replay.
+make that region unfavourable on the study's replay.
 
 **Optional: a simulator check, one job, ≤ 1 h, 8 × H200 = 480 SU** (8 GPU × 1 h × 60 SU/GPU-h; billing is per second
 of GPU time, so 480 is the cap). Use the same image and harness as E4, with no nsys. Measure step time from the server
@@ -196,7 +196,7 @@ log the same way as the G-DISTORT log basis:
    - Margin: the simulator's TP8 ÷ TP4 ratio error was 2–5 %, and its attention error was up to +22 %. A 5 %
      margin on either side of 1.00 is therefore the tightest that is defensible.
 
-Run this only if we want a measured DP number for the write-up. It would not change the serving choice.
+Run this only if a measured DP number is wanted for the write-up. It would not change the serving choice.
 
 ## 7. Reproduce (CPU only, about 3 min)
 

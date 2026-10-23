@@ -1,7 +1,8 @@
 # Cache-aware routing: CPU study
 
 Question: the main study summary proposes re-running the 16-GPU configuration (R16: one SGLang server, TP16 +
-attention-DP16 + EP16, round-robin dispatch) with cache-aware dispatch, at about 8,000 SU (our own estimate, not in this repo). Can the existing logs,
+attention-DP16 + EP16, round-robin dispatch) with cache-aware dispatch, at about 8,000 SU (three 1.5-hour launches on 16 × GB200 plus a smoke test of about 800 SU; SU is the cluster's billing unit, 100 per
+GB200 GPU-hour). Can the existing logs,
 plus a validated simulation, answer that question without a GPU?
 
 Short answer:
@@ -18,7 +19,7 @@ Short answer:
 5. The cache question needs no GPU. A GPU run would only test the throughput estimate; the smallest useful one is in
    [GPU decision](#gpu-decision).
 
-Labels: **[code]** read on SGLang `origin/main` `2e7c9d851c` (2026-10-21); **[log]** measured in our launches;
+Labels: **[code]** read on SGLang `origin/main` `2e7c9d851c` (2026-10-21); **[log]** measured in the main study's launches;
 **[sim]** output of the scripts here; **[estimate]** a model built on [log] and [sim].
 
 ## 1. What SGLang routes, and where [code]
@@ -28,7 +29,7 @@ Inside one server (`python/sglang/srt/managers/data_parallel_controller.py`):
   (`:104-110`).
   - `--load-balance-method` accepts `auto, round_robin, follow_bootstrap_room, total_requests, total_tokens`
     (`arg_groups/fields/parallel.py:91-103`).
-  - `auto` resolves to round_robin except on a PD prefill server (`arg_groups/serving_hook.py:215-228`). Our R16
+  - `auto` resolves to round_robin except on a PD prefill server (`arg_groups/serving_hook.py:215-228`). The R16
     log records `load_balance_method: 'round_robin'`.
   - TOTAL_REQUESTS and TOTAL_TOKENS pick the rank with the fewest running + waiting requests, or the fewest
     tokens, read from shared-memory load snapshots. They then add the new request to that rank's count
@@ -37,7 +38,7 @@ Inside one server (`python/sglang/srt/managers/data_parallel_controller.py`):
     in-server policy is prefix-aware.**
 - **External choice of rank.** Every scheduler first checks `req.routed_dp_rank` and, if it is set, sends the
   request straight to that rank (`maybe_external_dp_rank_routing`, `:839-852`; for example `:854-856`).
-  - The field is on `GenerateReqInput` (`managers/io_struct.py:297-302`; also `:298` in our pinned `a6a8c56015b8`).
+  - The field is on `GenerateReqInput` (`managers/io_struct.py:297-302`; also `:298` in the pinned `a6a8c56015b8`).
   - It is range-checked in `tokenizer_manager.py:930-939`.
   - So a client or a router can pin a session to a rank.
 
@@ -61,7 +62,7 @@ Across replicas, the repo has two routers:
     request (`src/core/worker.rs:1106-1111`). This is what makes the gateway prefix-aware across the DP ranks of a
     single server.
   - **Unverified:** what text it extracts from a native `/generate` request that carries only `input_ids`, which
-    is what our replay client sends. The protocol crate is outside this repo.
+    is what the study's replay client sends. The protocol crate is outside this repo.
 - **`sgl-router`** ("Slim, KV-aware router", `README.md:3`).
   - Its `cache_aware` prefers the engine holding the longest **actually cached** prefix, known from engine KV
     events through a local or external indexer, with at least 1024 matched tokens by default. `session_aware` pins
@@ -284,7 +285,7 @@ A hypothesis for the rest, not tested here: the 4-node EP16 configuration itself
 ## GPU decision
 
 - **The cache question needs no GPU.** It asks how much prefix reuse R16 loses and what prefix-aware dispatch
-  recovers, and the validated simulation answers both. On the [estimate] above, the planned R16 re-run (about 8,000 SU by our own estimate) is
+  recovers, and the validated simulation answers both. On the [estimate] above, the planned R16 re-run (about 8,000 SU) is
   not justified.
 - **A GPU run would only test the throughput estimate in §5.** The smallest useful run is one R16 launch in the
   pinned image:

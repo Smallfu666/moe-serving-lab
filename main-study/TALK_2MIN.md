@@ -3,6 +3,8 @@
 ## Script (about 280 words)
 
 Spoken numbers are rounded; the exact values are in [SUMMARY.md](SUMMARY.md) and the results files.
+The script reflects the study as scored on 2026-10-16. The cache-aware follow-up it ends on has since been studied on
+CPU only ([SUMMARY.md, next step](SUMMARY.md#next-step-and-cpu-follow-up)).
 
 I served one large mixture-of-experts model, Qwen3 235B, with SGLang on H200 and on GB200.
 The workload replays real coding-agent sessions; at low load the prefix-cache hit rate is about 95 percent.
