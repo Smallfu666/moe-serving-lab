@@ -155,7 +155,3 @@ licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Only s
 model's chat template (message fields reduced to role, content, tool calls and their ids) and cut at the first turn whose prompt
 plus min(answer, 1,024) exceeds 32,768 tokens; the replay asks for at most 1,024 output tokens per turn
 (`e1-prereg.md` §2).
-
-## 11. Notes on how this was made
-
-_TODO (author): decide whether and how to describe AI assistance before this repository is made public._
