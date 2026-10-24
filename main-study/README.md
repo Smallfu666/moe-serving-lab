@@ -102,17 +102,22 @@ not checked in source). The dispatch setting matters only with attention-DP (R16
 ## Why GB200 and 2 GPUs
 
 See [`../docs/hardware.md`](../docs/hardware.md): a GB200 job can ask for 1–2 GPUs or for 16 and more, nothing in
-between, so the model has to fit in 2 × 185 GiB.
+between, so the model has to fit in 2 × 185 GiB. E3's 4-GPU configuration (N4) runs one 4-GPU server per node inside
+a 16-GPU job.
 
 ## Layout
 
-| Folder | Contents |
+| Path | Contents |
 |---|---|
+| [`SUMMARY.md`](SUMMARY.md) | one-page overview of E1–E4 with the headline numbers |
+| [`TALK_2MIN.md`](TALK_2MIN.md) | a two-minute spoken version with likely questions |
+| [`WHAT_I_LEARNED_SCAFFOLD.md`](WHAT_I_LEARNED_SCAFFOLD.md) | questions for the author's own "What I learned" sections |
 | [`prereg/`](prereg/) | the frozen preregistrations (`e1`–`e4-prereg.md`) |
 | [`figures/`](figures/) | figures for the summary, drawn by `make_figures.py` from the results files |
 | [`harness/`](harness/) | replay client, launch wrapper, pre-flight checks; environment variables and placeholders only |
 | [`results/`](results/) | small summary tables, quoted from the independent score; no raw logs |
 | [`analysis/`](analysis/) | scoring and attribution scripts, the post-hoc log analyses, and their small derived outputs (`analysis/derived/`) |
+| [`sample/`](sample/) | the 1,024 sampled session ids of the replay |
 
 ## Workload
 

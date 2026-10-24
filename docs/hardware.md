@@ -1,12 +1,13 @@
 # Hardware notes
 
-> Draft. Every value below is either one we read on the machine (`nvidia-smi`, `uname -m`, scheduler limits) or is
-> tagged **[SPEC]**, meaning a vendor figure we have not measured.
+> Every value below was either read on the machine (`nvidia-smi`, `uname -m`, scheduler limits) or is tagged
+> **[SPEC]**, meaning a vendor figure that was not measured here.
 
 The GPU work runs on a national HPC center's Slurm cluster, which has an H200 partition and a GB200 partition. One
-earlier case study ran on a single-GPU workstation.
+earlier case study ran on a single-GPU workstation. One E2 configuration (8 × H100) ran on a second cluster and is
+not a controlled comparison with the rest.
 
-## 1. What we have
+## 1. Machines
 
 | | H200 nodes | GB200 nodes | Workstation |
 |---|---|---|---|
@@ -17,6 +18,11 @@ earlier case study ran on a single-GPU workstation.
 | Driver | 580.65.06 | 580.105.08 | — |
 | Host CPU | x86_64 | **Grace, aarch64**, 144 cores | x86_64 |
 | Host RAM per node | 1,900 GB | 914 GB | — |
+
+The 8 × H100 (80 GB) configuration ran on another cluster with driver 550 plus CUDA-13 compatibility libraries and a
+different container runtime (`singularity` instead of `apptainer`); see
+[`../main-study/prereg/e2-prereg.md`](../main-study/prereg/e2-prereg.md) §2 and §2a and
+[`../main-study/results/e2-results.md`](../main-study/results/e2-results.md).
 
 - The H200 and GB200 drivers are the same generation but different minor versions.
 - The cluster login node is x86_64. The GB200 compute nodes are aarch64. An x86 container, wheel or virtualenv built on
@@ -34,17 +40,18 @@ GPU counts are limited per queue, and the limits live in the scheduler's QoS set
 | large queue | 24 h | 16–32 |
 | rack queue | 12 h | 32–72 |
 
-- **3 to 15 GPUs cannot be requested at all.** This is why the main study runs every Blackwell arm on 2 GPUs (TP2) and
-  needs a model that fits in 2 × 185 GiB.
+- **3 to 15 GPUs cannot be requested at all.** This is why E1 and E2 run every Blackwell arm on 2 GPUs (TP2) and
+  need a model that fits in 2 × 185 GiB. E3's one-node 4-GPU configuration (N4) comes from a 16-GPU job over four
+  nodes that runs one independent 4-GPU server per node; E3's R16 is one server over 16 GPUs in four nodes.
 - The 2-GPU cap of the development queue is per project account, shared with other users of the same project.
 - A request above the cap pends forever, and the scheduler still prints an estimated start time.
 
 ## 3. Occupied GPUs on the development queue
 
-In 3 of our first 4 placements on the development queue, at least one assigned GPU was already holding 175,113–177,503
-MiB (92–94 % of its memory). We have not determined what held that memory.
+In 3 of the first 4 placements on the development queue, at least one assigned GPU was already holding 175,113–177,503
+MiB (92–94 % of its memory). What held that memory was not determined.
 
-What we do about it:
+How the harness handles it:
 
 - Every GB200 job first reads `memory.used` on all assigned GPUs and takes the maximum. If it is ≥ 2000 MiB, the job
   stops with a distinct exit code before running any arm. Such a stop is an infrastructure event, not a result.
@@ -55,13 +62,13 @@ What we do about it:
 
 ## 4. GB200 is not B200
 
-| | GB200 (what we have) | B200 (HGX) | Effect on our numbers |
+| | GB200 (used here) | B200 (HGX) | Effect on these numbers |
 |---|---|---|---|
 | GPU architecture | SM100 | SM100 [SPEC] | The same SM100 code paths run (for example SGLang's `is_sm100` branches) |
-| Clocks and power limits | — | differ from GB200 [SPEC] | We label every number "GB200" and do not put it next to published B200 numbers |
+| Clocks and power limits | — | differ from GB200 [SPEC] | Every number is labelled "GB200" and is not put next to published B200 numbers |
 | Host CPU | Grace, aarch64 | x86_64 [SPEC] | CPU-side work (scheduler, tokenizer) runs on a different CPU from the H200 arm, so low-concurrency latency mixes in host differences |
 | CPU↔GPU link | NVLink-C2C [SPEC] | PCIe [SPEC] | Host-memory KV offload would behave differently; the main study does not test offload |
-| GPU↔GPU link between the 2 GPUs we get | not measured | — | Each job records `nvidia-smi topo -m` |
+| GPU↔GPU link between the 2 GPUs of a job | not measured | — | Each job records `nvidia-smi topo -m` |
 
 HBM bandwidth: H200 4.8 TB/s and GB200 8 TB/s per GPU [SPEC]. The main study's latency predictions start from this
-ratio (about 0.6); it is a vendor figure, not something we measured.
+ratio (about 0.6); it is a vendor figure, not a measurement.
